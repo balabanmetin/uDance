@@ -1,8 +1,8 @@
 import dendropy as dy
 
 
-def compute_bipartition_alignment(tree_fp):
-    dytree = dy.Tree.get(path=tree_fp, schema="newick")
+def compute_bipartition_alignment(tree_str):
+    dytree = dy.Tree.get(data=tree_str, schema="newick")
     dytree.encode_bipartitions()
 
     bmatrix = []
@@ -16,6 +16,3 @@ def compute_bipartition_alignment(tree_fp):
     assert len(labels) == len(bmatrix_inverted)
 
     return "\n".join(map(lambda x: "\n".join(list(x)), zip(labels, bmatrix_inverted))) + "\n"
-
-
-

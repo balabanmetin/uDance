@@ -1,4 +1,6 @@
 import json
+import sys
+import multiprocessing as mp
 from collections import deque
 
 from compute_bipartition_alignment import compute_bipartition_alignment
@@ -6,7 +8,9 @@ from fasta2dic import fasta2dic
 from newick_extended import read_tree_newick
 import treeswift as ts
 from pathlib import Path
-import os
+from os import listdir
+from os.path import isfile, join, splitext
+import time
 
 
 # inputs: a placement tree
@@ -62,8 +66,68 @@ def undo_resolve_polytomies(tree):
                 par.add_child(c)
 
 
+def partition_worker(i, j):
+    partition_output_dir = join(options.output_fp, str(i))
+    Path(partition_output_dir).mkdir(parents=True, exist_ok=True)
+    undo_resolve_polytomies(j)
+    newick_path = join(partition_output_dir, "astral_constraint.nwk")
+    j.write_tree_newick(newick_path)
+
+    # find all outgroups
+    outgroups = [n.label for n in j.traverse_postorder() if n.outgroup]
+    if len(outgroups) > 3:
+        constraint = j.extract_tree_with(outgroups, suppress_unifurcations=True)
+        bipartition_path = join(partition_output_dir, "bipartition.fasta")
+        with open(bipartition_path, "w") as f:
+            f.write(compute_bipartition_alignment(constraint.__str__()))
+        raxml_constraint_path = join(partition_output_dir, "raxml_constraint.nwk")
+        constraint.write_tree_newick(raxml_constraint_path)
+
+    species_list_path = join(partition_output_dir, "species.txt")
+    species_list = []
+    with open(species_list_path, "w") as f:
+        for n in j.traverse_postorder():
+            if n.is_leaf():
+                species_list += [n.label]
+                f.write(n.label + "\n")
+            if hasattr(n, 'placements'):
+                for p in n.placements:
+                    species_list += [p]
+                    f.write(p + "\n")
+    return (i, species_list)
+
+
+#  todo VECTORIZE!
+def alignment_worker(i, j):
+    species = species_dict[i]
+    partition_aln = {key: fa_dict[key] for key in species if key in fa_dict}
+    if len(partition_aln) == 0:
+        return
+    aln_length = len(next(iter(partition_aln.values())))
+    all_gap = [True]*aln_length
+    for s in partition_aln.values():
+        is_gap = [c == '-' for c in s]
+        all_gap = [x and y for x, y in zip(all_gap, is_gap)]
+
+    for k, v in partition_aln.items():
+        nongap = "".join([c for c, isg in zip(list(v), all_gap) if not isg])
+        partition_aln[k] = nongap
+
+    trimmed_aln_length = len(next(iter(partition_aln.values())))
+    if trimmed_aln_length >= options.overlap_length and len(partition_aln) >= 4:
+        partition_output_dir = join(options.output_fp, str(i))
+        aln_outdir = join(partition_output_dir, basename)
+        Path(aln_outdir).mkdir(parents=True, exist_ok=True)
+        aln_output_path = join(aln_outdir, "aln.fa")
+        with open(aln_output_path, "w", buffering=100000000) as f:
+            for k, v in partition_aln.items():
+                f.write(">" + k + "\n")
+                f.write(v + "\n")
+    return
+
 
 if __name__ == "__main__":
+    mp.set_start_method('fork')
     parser = OptionParser()
     parser.add_option("-j", "--jplace", dest="jplace_fp",
                       help="path to the jplace placement file", metavar="FILE")
@@ -72,14 +136,26 @@ if __name__ == "__main__":
     parser.add_option("-o", "--output", dest="output_fp",
                       help="path for the output directory where files will be placed",
                       metavar="DIRECTORY")
-    parser.add_option("-x", "--extendedref", dest="extended_ref_fp",
-                      help="path to the extened reference alignment file (FASTA), "
-                           "containing reference and query sequences",
+    parser.add_option("-s", "--alignment-dir", dest="alignment_dir_fp",
+                      help="path for input directory which contains "
+                           "extended reference alignment files (FASTA), "
+                           "containing reference and query sequences.",
                       metavar="FILE")
     parser.add_option("-p", "--protein", dest="protein_seqs", action='store_true', default=False,
                       help="input sequences are protein sequences")
+    parser.add_option("-T", "--threads", dest="num_thread", default="0",
+                      help="number of cores used in placement. "
+                           "0 to use all cores in the running machine", metavar="NUMBER")
+    parser.add_option("-l", "--overlap", dest="overlap_length", default="50",
+                      help="minimum alignment overlap length needed to use the subalignment"
+                           "in subtree refinement", metavar="NUMBER")
 
     (options, args) = parser.parse_args()
+
+    options.num_thread = int(options.num_thread)
+    options.overlap_length = int(options.overlap_length)
+    if not options.num_thread:
+        options.num_thread = mp.cpu_count()
 
     with open(options.jplace_fp) as f:
         jp = json.load(f)
@@ -216,39 +292,26 @@ if __name__ == "__main__":
 
     Path(options.output_fp).mkdir(parents=True, exist_ok=True)
 
-    fa_dict = fasta2dic(options.extended_ref_fp, options.protein_seqs, False)
+    pool = mp.Pool(options.num_thread)
+    species_dict = dict(pool.starmap(partition_worker, tree_catalog.items()))
+    pool.close()
+    pool.join()
 
-    for i, j in tree_catalog.items():
-        partition_output_dir = os.path.join(options.output_fp, str(i))
-        Path(partition_output_dir).mkdir(parents=True, exist_ok=True)
-        undo_resolve_polytomies(j)
-        newick_path = os.path.join(partition_output_dir, "constraint_tree.nwk")
-        j.write_tree_newick(newick_path)
-
-        bipartition_path = os.path.join(partition_output_dir, "bipartition.fasta")
-        with open(bipartition_path, "w") as f:
-            f.write(compute_bipartition_alignment(newick_path))
-
-        species_list_path = os.path.join(partition_output_dir, "species.txt")
-        species_list = []
-        with open(species_list_path, "w") as f:
-            for n in j.traverse_postorder():
-                if n.is_leaf():
-                    species_list += [n.label]
-                    f.write(n.label + "\n")
-                if hasattr(n, 'placements'):
-                    for p in n.placements:
-                        species_list += [p]
-                        f.write(p + "\n")
-
-        alignment_path = os.path.join(partition_output_dir, "alignment.fasta")
-        with open(alignment_path, "w", buffering=100000000) as f:
-            for s in species_list:
-                f.write(">" + s + "\n")
-                f.write(fa_dict[s] + "\n")
+    only_files = [f for f in listdir(options.alignment_dir_fp) if isfile(join(options.alignment_dir_fp, f))]
+    for aln in only_files:
+        aln_input_file = join(options.alignment_dir_fp, aln)
+        basename = splitext(aln)[0]
+        try:
+            fa_dict = fasta2dic(aln_input_file, options.protein_seqs, False)
+            pool = mp.Pool(options.num_thread)
+            results = pool.starmap(alignment_worker, tree_catalog.items())
+            pool.close()
+            pool.join()
+        except e:
+            print("Alignment %s is not a valid fasta alignment" % aln_input_file, file=sys.stderr)
 
 
-
+    # TODO a bipartition for each alignment
     for i, j in tree_catalog.items():
         count = 0
         for n in j.traverse_postorder():
@@ -257,7 +320,7 @@ if __name__ == "__main__":
                     count +=1
                 elif n.outgroup is False and hasattr(n, 'placements'):
                     count += len(n.placements)
-            except:
+            except e:
                 pass
         print (i, count)
 
