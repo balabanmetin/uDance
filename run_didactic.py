@@ -11,6 +11,7 @@ from pathlib import Path
 from os import listdir
 from os.path import isfile, join, splitext
 import time
+import numpy as np
 
 
 # inputs: a placement tree
@@ -97,22 +98,19 @@ def partition_worker(i, j):
     return (i, species_list)
 
 
-#  todo VECTORIZE!
+#  VECTORIZED (yay!)
 def alignment_worker(i, j):
     species = species_dict[i]
     partition_aln = {key: fa_dict[key] for key in species if key in fa_dict}
+
     if len(partition_aln) == 0:
         return
     aln_length = len(next(iter(partition_aln.values())))
-    all_gap = [True]*aln_length
+    not_all_gap = np.array([False]*aln_length)
     for s in partition_aln.values():
-        is_gap = [c == '-' for c in s]
-        all_gap = [x and y for x, y in zip(all_gap, is_gap)]
-
+        not_all_gap = np.logical_or(not_all_gap,  (s != b'-'))
     for k, v in partition_aln.items():
-        nongap = "".join([c for c, isg in zip(list(v), all_gap) if not isg])
-        partition_aln[k] = nongap
-
+        partition_aln[k] = v[not_all_gap]
     trimmed_aln_length = len(next(iter(partition_aln.values())))
     if trimmed_aln_length >= options.overlap_length and len(partition_aln) >= 4:
         partition_output_dir = join(options.output_fp, str(i))
@@ -122,7 +120,7 @@ def alignment_worker(i, j):
         with open(aln_output_path, "w", buffering=100000000) as f:
             for k, v in partition_aln.items():
                 f.write(">" + k + "\n")
-                f.write(v + "\n")
+                f.write(v.tostring().decode("UTF-8") + "\n")
     return
 
 
