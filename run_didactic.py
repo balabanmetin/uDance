@@ -352,6 +352,7 @@ if __name__ == "__main__":
 
     only_files = [f for f in listdir(options.alignment_dir_fp) if isfile(join(options.alignment_dir_fp, f))]
     main_script = open(join(options.output_fp, "main_script.sh"), "w")
+
     for aln in only_files:
         aln_input_file = join(options.alignment_dir_fp, aln)
         basename = splitext(aln)[0]
@@ -366,6 +367,7 @@ if __name__ == "__main__":
             main_script.write("\n")
         except e:
             print("Alignment %s is not a valid fasta alignment" % aln_input_file, file=sys.stderr)
+
     main_script.close()
 
     # TODO a bipartition for each alignment
