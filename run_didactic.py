@@ -9,7 +9,7 @@ from newick_extended import read_tree_newick
 import treeswift as ts
 from pathlib import Path
 from os import listdir
-from os.path import isfile, join, splitext
+from os.path import isfile, join, splitext, expanduser, abspath
 import time
 import numpy as np
 
@@ -76,8 +76,9 @@ def partition_worker(i, j):
 
     # find all outgroups
     outgroups = [n.label for n in j.traverse_postorder() if n.outgroup]
-    if len(outgroups) > 3:
+    if len(outgroups) >= 4:
         constraint = j.extract_tree_with(outgroups, suppress_unifurcations=True)
+        constraint.is_rooted = False
         bipartition_path = join(partition_output_dir, "bipartition.fasta")
         with open(bipartition_path, "w") as f:
             f.write(compute_bipartition_alignment(constraint.__str__()))
@@ -99,20 +100,23 @@ def partition_worker(i, j):
 
 
 #  VECTORIZED (yay!)
+#  TODO raise error if directory exists
 def alignment_worker(i, j):
     species = species_dict[i]
     partition_aln = {key: fa_dict[key] for key in species if key in fa_dict}
 
-    if len(partition_aln) == 0:
-        return
+    if len(partition_aln) < 4:
+        return None
     aln_length = len(next(iter(partition_aln.values())))
     not_all_gap = np.array([False]*aln_length)
     for s in partition_aln.values():
         not_all_gap = np.logical_or(not_all_gap,  (s != b'-'))
     for k, v in partition_aln.items():
         partition_aln[k] = v[not_all_gap]
+
     trimmed_aln_length = len(next(iter(partition_aln.values())))
     if trimmed_aln_length >= options.overlap_length and len(partition_aln) >= 4:
+        # write trimmed MSA fasta
         partition_output_dir = join(options.output_fp, str(i))
         aln_outdir = join(partition_output_dir, basename)
         Path(aln_outdir).mkdir(parents=True, exist_ok=True)
@@ -121,7 +125,56 @@ def alignment_worker(i, j):
             for k, v in partition_aln.items():
                 f.write(">" + k + "\n")
                 f.write(v.tostring().decode("UTF-8") + "\n")
-    return
+
+        constraint_outgroup_tree = join(partition_output_dir, "raxml_constraint.nwk")
+        if isfile(constraint_outgroup_tree):
+            t = ts.read_tree_newick(constraint_outgroup_tree)
+            induced_constraints_tree = t.extract_tree_with(list(partition_aln.keys()), suppress_unifurcations=True)
+            induced_constraints_tree.is_rooted = False
+            numlabels = induced_constraints_tree.num_nodes(internal=False)
+            if numlabels >= 4:
+                # write fasttree and raxml constraint
+                bipartition_path = join(aln_outdir, "bipartition.fasta")
+                with open(bipartition_path, "w") as f:
+                    f.write(compute_bipartition_alignment(induced_constraints_tree.__str__()))
+                induced_raxml_constraint_path = join(aln_outdir, "raxml_constraint.nwk")
+                induced_constraints_tree.write_tree_newick(induced_raxml_constraint_path)
+
+        script = join(aln_outdir, "run.sh")
+        with open(script, "w") as f:
+            f.write("#! /usr/bin/env bash\n\n")
+            f.write("export OMP_NUM_THREADS=1\n\n")
+            bipartition_path = join(aln_outdir, "bipartition.fasta")
+            fasttree_log = join(aln_outdir, "fasttree.log")
+            fasttree_err = join(aln_outdir, "fasttree.err")
+            fasttree_nwk = join(aln_outdir, "fasttree.nwk")
+            if isfile(bipartition_path):
+                f.write("FastTree -constraints %s -log %s < %s > %s 2> %s \n"
+                        % (bipartition_path, fasttree_log, aln_output_path, fasttree_nwk, fasttree_err))
+            else:
+                f.write("FastTree -log %s < %s > %s 2> %s \n"
+                        % (fasttree_log, aln_output_path, fasttree_nwk, fasttree_err))
+
+            fasttree_resolved_nwk = join(aln_outdir, "fasttree_resolved.nwk")
+            f.write("python3 -c \"import sys, treeswift; "
+                    "t=treeswift.read_tree_newick(input()); "
+                    "t.resolve_polytomies(); print(t)\" < %s > %s \n" % (fasttree_nwk, fasttree_resolved_nwk))
+
+            induced_raxml_constraint_path = join(aln_outdir, "raxml_constraint.nwk")
+            raxml_err = join(aln_outdir, "raxml.err")
+            raxml_out = join(aln_outdir, "raxml.out")
+            if isfile(induced_raxml_constraint_path):
+                f.write("raxml-ng --tree %s --tree-constraint %s "
+                        "--msa %s --model LG+G --prefix RUN --seed 12345 "
+                        "--threads 1 > %s 2> %s \n"
+                        % (fasttree_resolved_nwk, induced_raxml_constraint_path, aln_output_path, raxml_out, raxml_err))
+            else:
+                f.write("raxml-ng --tree %s "
+                        "--msa %s --model LG+G --prefix RUN --seed 12345 "
+                        "--threads 1 > %s 2> %s \n"
+                        % (fasttree_resolved_nwk, aln_output_path, raxml_out, raxml_err))
+            return script
+    return None
 
 
 if __name__ == "__main__":
@@ -154,6 +207,8 @@ if __name__ == "__main__":
     options.overlap_length = int(options.overlap_length)
     if not options.num_thread:
         options.num_thread = mp.cpu_count()
+
+    options.output_fp = abspath(expanduser(options.output_fp))
 
     with open(options.jplace_fp) as f:
         jp = json.load(f)
@@ -296,18 +351,22 @@ if __name__ == "__main__":
     pool.join()
 
     only_files = [f for f in listdir(options.alignment_dir_fp) if isfile(join(options.alignment_dir_fp, f))]
+    main_script = open(join(options.output_fp, "main_script.sh"), "w")
     for aln in only_files:
         aln_input_file = join(options.alignment_dir_fp, aln)
         basename = splitext(aln)[0]
         try:
             fa_dict = fasta2dic(aln_input_file, options.protein_seqs, False)
             pool = mp.Pool(options.num_thread)
-            results = pool.starmap(alignment_worker, tree_catalog.items())
+            scripts = pool.starmap(alignment_worker, tree_catalog.items())
             pool.close()
             pool.join()
+            valid_scripts = [s for s in scripts if s is not None]
+            main_script.write("\n".join(valid_scripts))
+            main_script.write("\n")
         except e:
             print("Alignment %s is not a valid fasta alignment" % aln_input_file, file=sys.stderr)
-
+    main_script.close()
 
     # TODO a bipartition for each alignment
     for i, j in tree_catalog.items():
