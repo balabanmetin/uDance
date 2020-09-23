@@ -1,23 +1,20 @@
 import json
 import sys
 import multiprocessing as mp
-from collections import deque
 
-from compute_bipartition_alignment import compute_bipartition_alignment
-from fasta2dic import fasta2dic
-from newick_extended import read_tree_newick
+from didactic.PoolAlignmentWorker import PoolAlignmentWorker
+from didactic.fasta2dic import fasta2dic
+from didactic.newick_extended import read_tree_newick
 import treeswift as ts
 from pathlib import Path
 from os import listdir
-from os.path import isfile, join, splitext, expanduser, abspath
-import time
-import numpy as np
-
+from os.path import isfile, join, splitext
+from didactic.options import options_config
+from didactic.treecluster_sum import min_tree_coloring_sum
+from didactic.PoolPartitionWorker import PoolPartitionWorker
 
 # inputs: a placement tree
 # max number of things in each cluster
-from optparse import OptionParser
-from treecluster_sum import min_tree_coloring_sum
 
 
 def aggregate_placements(index_to_node_map, placements):
@@ -56,159 +53,10 @@ def set_closest_three_directions(tree):
                 node.closest_top = (sb + sibling.edge_length + node.edge_length, sn)
 
 
-def undo_resolve_polytomies(tree):
-    for e in tree.traverse_postorder():
-        if e == tree.root:
-            continue
-        if e.outgroup == False and e.resolved_randomly:  # edge length check just for safety
-            par = e.parent
-            par.remove_child(e)
-            for c in e.children:
-                par.add_child(c)
-
-
-def partition_worker(i, j):
-    partition_output_dir = join(options.output_fp, str(i))
-    Path(partition_output_dir).mkdir(parents=True, exist_ok=True)
-    undo_resolve_polytomies(j)
-    newick_path = join(partition_output_dir, "astral_constraint.nwk")
-    j.write_tree_newick(newick_path)
-
-    # find all outgroups
-    outgroups = [n.label for n in j.traverse_postorder() if n.outgroup]
-    if len(outgroups) >= 4:
-        constraint = j.extract_tree_with(outgroups, suppress_unifurcations=True)
-        constraint.is_rooted = False
-        bipartition_path = join(partition_output_dir, "bipartition.fasta")
-        with open(bipartition_path, "w") as f:
-            f.write(compute_bipartition_alignment(constraint.__str__()))
-        raxml_constraint_path = join(partition_output_dir, "raxml_constraint.nwk")
-        constraint.write_tree_newick(raxml_constraint_path)
-
-    species_list_path = join(partition_output_dir, "species.txt")
-    species_list = []
-    with open(species_list_path, "w") as f:
-        for n in j.traverse_postorder():
-            if n.is_leaf():
-                species_list += [n.label]
-                f.write(n.label + "\n")
-            if hasattr(n, 'placements'):
-                for p in n.placements:
-                    species_list += [p]
-                    f.write(p + "\n")
-    return (i, species_list)
-
-
-#  VECTORIZED (yay!)
-#  TODO raise error if directory exists
-def alignment_worker(i, j):
-    species = species_dict[i]
-    partition_aln = {key: fa_dict[key] for key in species if key in fa_dict}
-
-    if len(partition_aln) < 4:
-        return None
-    aln_length = len(next(iter(partition_aln.values())))
-    not_all_gap = np.array([False]*aln_length)
-    for s in partition_aln.values():
-        not_all_gap = np.logical_or(not_all_gap,  (s != b'-'))
-    for k, v in partition_aln.items():
-        partition_aln[k] = v[not_all_gap]
-
-    trimmed_aln_length = len(next(iter(partition_aln.values())))
-    if trimmed_aln_length >= options.overlap_length and len(partition_aln) >= 4:
-        # write trimmed MSA fasta
-        partition_output_dir = join(options.output_fp, str(i))
-        aln_outdir = join(partition_output_dir, basename)
-        Path(aln_outdir).mkdir(parents=True, exist_ok=True)
-        aln_output_path = join(aln_outdir, "aln.fa")
-        with open(aln_output_path, "w", buffering=100000000) as f:
-            for k, v in partition_aln.items():
-                f.write(">" + k + "\n")
-                f.write(v.tostring().decode("UTF-8") + "\n")
-
-        constraint_outgroup_tree = join(partition_output_dir, "raxml_constraint.nwk")
-        if isfile(constraint_outgroup_tree):
-            t = ts.read_tree_newick(constraint_outgroup_tree)
-            induced_constraints_tree = t.extract_tree_with(list(partition_aln.keys()), suppress_unifurcations=True)
-            induced_constraints_tree.is_rooted = False
-            numlabels = induced_constraints_tree.num_nodes(internal=False)
-            if numlabels >= 4:
-                # write fasttree and raxml constraint
-                bipartition_path = join(aln_outdir, "bipartition.fasta")
-                with open(bipartition_path, "w") as f:
-                    f.write(compute_bipartition_alignment(induced_constraints_tree.__str__()))
-                induced_raxml_constraint_path = join(aln_outdir, "raxml_constraint.nwk")
-                induced_constraints_tree.write_tree_newick(induced_raxml_constraint_path)
-
-        script = join(aln_outdir, "run.sh")
-        with open(script, "w") as f:
-            f.write("#! /usr/bin/env bash\n\n")
-            f.write("export OMP_NUM_THREADS=1\n\n")
-            bipartition_path = join(aln_outdir, "bipartition.fasta")
-            fasttree_log = join(aln_outdir, "fasttree.log")
-            fasttree_err = join(aln_outdir, "fasttree.err")
-            fasttree_nwk = join(aln_outdir, "fasttree.nwk")
-            if isfile(bipartition_path):
-                f.write("FastTree -constraints %s -log %s < %s > %s 2> %s \n"
-                        % (bipartition_path, fasttree_log, aln_output_path, fasttree_nwk, fasttree_err))
-            else:
-                f.write("FastTree -log %s < %s > %s 2> %s \n"
-                        % (fasttree_log, aln_output_path, fasttree_nwk, fasttree_err))
-
-            fasttree_resolved_nwk = join(aln_outdir, "fasttree_resolved.nwk")
-            f.write("python3 -c \"import sys, treeswift; "
-                    "t=treeswift.read_tree_newick(input()); "
-                    "t.resolve_polytomies(); print(t)\" < %s > %s \n" % (fasttree_nwk, fasttree_resolved_nwk))
-
-            induced_raxml_constraint_path = join(aln_outdir, "raxml_constraint.nwk")
-            raxml_err = join(aln_outdir, "raxml.err")
-            raxml_out = join(aln_outdir, "raxml.out")
-            if isfile(induced_raxml_constraint_path):
-                f.write("raxml-ng --tree %s --tree-constraint %s "
-                        "--msa %s --model LG+G --prefix RUN --seed 12345 "
-                        "--threads 1 > %s 2> %s \n"
-                        % (fasttree_resolved_nwk, induced_raxml_constraint_path, aln_output_path, raxml_out, raxml_err))
-            else:
-                f.write("raxml-ng --tree %s "
-                        "--msa %s --model LG+G --prefix RUN --seed 12345 "
-                        "--threads 1 > %s 2> %s \n"
-                        % (fasttree_resolved_nwk, aln_output_path, raxml_out, raxml_err))
-            return script
-    return None
-
-
 if __name__ == "__main__":
     mp.set_start_method('fork')
-    parser = OptionParser()
-    parser.add_option("-j", "--jplace", dest="jplace_fp",
-                      help="path to the jplace placement file", metavar="FILE")
-    parser.add_option("-f", "--threshold", dest="threshold", default="600",
-                      help="maximum number of elements in each cluster")
-    parser.add_option("-o", "--output", dest="output_fp",
-                      help="path for the output directory where files will be placed",
-                      metavar="DIRECTORY")
-    parser.add_option("-s", "--alignment-dir", dest="alignment_dir_fp",
-                      help="path for input directory which contains "
-                           "extended reference alignment files (FASTA), "
-                           "containing reference and query sequences.",
-                      metavar="FILE")
-    parser.add_option("-p", "--protein", dest="protein_seqs", action='store_true', default=False,
-                      help="input sequences are protein sequences")
-    parser.add_option("-T", "--threads", dest="num_thread", default="0",
-                      help="number of cores used in placement. "
-                           "0 to use all cores in the running machine", metavar="NUMBER")
-    parser.add_option("-l", "--overlap", dest="overlap_length", default="50",
-                      help="minimum alignment overlap length needed to use the subalignment"
-                           "in subtree refinement", metavar="NUMBER")
 
-    (options, args) = parser.parse_args()
-
-    options.num_thread = int(options.num_thread)
-    options.overlap_length = int(options.overlap_length)
-    if not options.num_thread:
-        options.num_thread = mp.cpu_count()
-
-    options.output_fp = abspath(expanduser(options.output_fp))
+    options, args = options_config()
 
     with open(options.jplace_fp) as f:
         jp = json.load(f)
@@ -344,9 +192,11 @@ if __name__ == "__main__":
     # replace it with n.children
 
     Path(options.output_fp).mkdir(parents=True, exist_ok=True)
+    partition_worker = PoolPartitionWorker()
+    partition_worker.set_class_attributes(options)
 
     pool = mp.Pool(options.num_thread)
-    species_dict = dict(pool.starmap(partition_worker, tree_catalog.items()))
+    species_dict = dict(pool.starmap(partition_worker.worker, tree_catalog.items()))
     pool.close()
     pool.join()
 
@@ -358,8 +208,10 @@ if __name__ == "__main__":
         basename = splitext(aln)[0]
         try:
             fa_dict = fasta2dic(aln_input_file, options.protein_seqs, False)
+            alignment_worker = PoolAlignmentWorker()
+            alignment_worker.set_class_attributes(options, species_dict, fa_dict, basename)
             pool = mp.Pool(options.num_thread)
-            scripts = pool.starmap(alignment_worker, tree_catalog.items())
+            scripts = pool.starmap(alignment_worker.worker, tree_catalog.items())
             pool.close()
             pool.join()
             valid_scripts = [s for s in scripts if s is not None]
