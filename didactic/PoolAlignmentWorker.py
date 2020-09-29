@@ -82,16 +82,18 @@ class PoolAlignmentWorker:
                 induced_raxml_constraint_path = join(aln_outdir, "raxml_constraint.nwk")
                 raxml_err = join(aln_outdir, "raxml.err")
                 raxml_out = join(aln_outdir, "raxml.out")
+                raxml_run = join(aln_outdir, "RUN")
                 if isfile(induced_raxml_constraint_path) and cls.options.constrain_outgroups:
                     f.write("raxml-ng --tree %s --tree-constraint %s "
-                            "--msa %s --model LG+G --prefix RUN --seed 12345 "
+                            "--msa %s --model LG+G --prefix %s --seed 12345 "
                             "--threads 1 > %s 2> %s \n"
-                            % (fasttree_resolved_nwk, induced_raxml_constraint_path, aln_output_path, raxml_out,
-                               raxml_err))
+                            % (fasttree_resolved_nwk, induced_raxml_constraint_path, aln_output_path,
+                               raxml_run, raxml_out, raxml_err))
                 else:
                     f.write("raxml-ng --tree %s "
-                            "--msa %s --model LG+G --prefix RUN --seed 12345 "
+                            "--msa %s --model LG+G --prefix %s --seed 12345 "
                             "--threads 1 > %s 2> %s \n"
-                            % (fasttree_resolved_nwk, aln_output_path, raxml_out, raxml_err))
+                            % (fasttree_resolved_nwk, aln_output_path,
+                               raxml_run, raxml_out, raxml_err))
                 return trimmed_aln_length*len(partition_aln), script
         return None

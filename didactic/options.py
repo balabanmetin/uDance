@@ -1,5 +1,6 @@
 from optparse import OptionParser
 from multiprocessing import cpu_count
+from os.path import abspath, expanduser
 from sys import stderr
 
 
@@ -37,7 +38,7 @@ def options_config():
     options.num_tasks = int(options.num_tasks)
     if not options.num_thread:
         options.num_thread = cpu_count()
-    #  options.output_fp = abspath(expanduser(options.output_fp))
+    options.output_fp = abspath(expanduser(options.output_fp))
     if options.num_tasks < 1:
         stderr.write("Invalid number of tasks. Number of tasks is set to the minimum value: 1.\n")
         options.num_tasks = 1
