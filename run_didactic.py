@@ -1,3 +1,4 @@
+import copy
 import json
 import sys
 import multiprocessing as mp
@@ -12,6 +13,8 @@ from os.path import isfile, join, splitext
 from didactic.options import options_config
 from didactic.treecluster_sum import min_tree_coloring_sum
 from didactic.PoolPartitionWorker import PoolPartitionWorker
+from random import Random
+
 
 # inputs: a placement tree
 # max number of things in each cluster
@@ -24,62 +27,76 @@ def aggregate_placements(index_to_node_map, placements):
             index_to_node_map[index].placements += [seqname]
 
 
+def closest_merge(x, y):
+    return x[0] + y, x[1]
+
+
 def set_closest_three_directions(tree):
     for node in tree.traverse_postorder():
+        node.repr_tree = {"down": ts.Tree(is_rooted=False)}
+        node.repr_tree["down"].root.edge_length = node.edge_length
         if node.is_leaf():
-            node.closest_left = (0, node)
-            node.closest_right = (0, node)
+            # node.closest[0] is left. node.closest[1] is right. node.closest[2] is high occupancy
+            node.repr_tuple = {"down": [(0, node), (0, node), (0, node)]}
+            node.repr_tree["down"].root.label = node.label
+            node.repr_tree["down"].root.outgroup = True
         else:
-            left, right = node.children
-            lb, ln = left.closest_child
-            node.closest_left = (lb + left.edge_length, ln)
-            rb, rn = right.closest_child
-            node.closest_right = (rb + right.edge_length, rn)
-        if node.closest_left[0] < node.closest_right[0]:
-            node.closest_child = node.closest_left
-        else:
-            node.closest_child = node.closest_right
+            closests = [min(map(lambda x: closest_merge(x, chd.edge_length), chd.repr_tuple["down"][:2]))
+                        for chd in node.children]
+            occups = sorted([closest_merge(chd.repr_tuple["down"][2], chd.edge_length) for chd in node.children])
+            if occups[0][1].occupancy < options.occupancy_threshold and occups[1][1].occupancy > occups[0][1].occupancy:
+                theoccup = [occups[1]]
+            else:
+                theoccup = [occups[0]]
+            node.repr_tuple = {"down": closests + theoccup}
+            for chd in node.children:
+                chdcopy = chd.repr_tree["down"].__copy__()
+                node.repr_tree["down"].root.add_child(chdcopy.root)
+            labs = list(set([x[1].label for x in node.repr_tuple["down"]]))
+            node.repr_tree["down"] = node.repr_tree["down"].extract_tree_with(labels=labs,
+                                                                              suppress_unifurcations=True)
+            for e in node.repr_tree["down"].traverse_postorder(internal=False):
+                e.outgroup = True
 
     for node in tree.traverse_preorder():
         if node == tree.root:
-            node.closest_top = (float("inf"), None)
+            node.repr_tuple["up"] = [(float("inf"), None), (float("inf"), None), (float("inf"), None)]
+            node.repr_tree["up"] = None
         else:
-            sibling = [c for c in node.parent.children if c != node][0]
-            sb, sn = sibling.closest_child
-            pb, pn = node.parent.closest_top
-            if pb < sibling.edge_length + sb:
-                node.closest_top = (pb + node.edge_length, pn)
+            node.repr_tree["up"] = ts.Tree(is_rooted=False)
+            node.repr_tree["up"].root.edge_length = node.edge_length
+            sib = [chd for chd in node.parent.children if chd != node][0]  # assumes binary tree
+            closests = [min(map(lambda x: closest_merge(x, node.edge_length),
+                                node.parent.repr_tuple["up"][:2]))]
+            closests += [min(map(lambda x: closest_merge(x, node.edge_length + sib.edge_length),
+                                 sib.repr_tuple["down"][:2]))]
+            occups = [closest_merge(node.parent.repr_tuple["up"][2], node.edge_length)]
+            occups += [closest_merge(sib.repr_tuple["down"][2], node.edge_length + sib.edge_length)]
+            occups = sorted(occups)
+
+            if occups[1][1] is None:
+                theoccup = [occups[0]]
+            elif occups[0][1].occupancy < options.occupancy_threshold and occups[1][1].occupancy > occups[0][
+                1].occupancy:
+                theoccup = [occups[1]]
             else:
-                node.closest_top = (sb + sibling.edge_length + node.edge_length, sn)
+                theoccup = [occups[0]]
+            node.repr_tuple["up"] = closests + theoccup
+
+            drecs = list(zip([node.parent, sib], ["up", "down"]))
+            for nei, drec in drecs:
+                if nei.repr_tree[drec] is not None:
+                    chdcopy = nei.repr_tree[drec].__copy__()
+                    node.repr_tree["up"].root.add_child(chdcopy.root)
+            valids = [pr for pr in node.repr_tuple["up"] if pr[1] is not None]
+            labs = list(set([x[1].label for x in valids]))
+            node.repr_tree["up"] = node.repr_tree["up"].extract_tree_with(labels=labs,
+                                                                          suppress_unifurcations=True)
+            for e in node.repr_tree["up"].traverse_postorder(internal=False):
+                e.outgroup = True
 
 
-if __name__ == "__main__":
-    mp.set_start_method('fork')
-
-    options, args = options_config()
-
-    with open(options.jplace_fp) as f:
-        jp = json.load(f)
-    tstree = read_tree_newick(jp["tree"])
-
-    index_to_node_map = {}
-    for e in tstree.traverse_postorder():
-        e.placements = []
-        if e != tstree.root:
-            index_to_node_map[e.edge_index] = e
-    aggregate_placements(index_to_node_map, jp["placements"])
-
-    min_tree_coloring_sum(tstree, float(options.threshold))
-
-    set_closest_three_directions(tstree)
-
-    colors = {}
-    for n in tstree.traverse_postorder():
-        if n.color not in colors:
-            colors[n.color] = [n]
-        else:
-            colors[n.color] += [n]
-
+def build_color_spanning_tree(tstree):
     color_spanning_tree = ts.Tree()
     r = color_spanning_tree.root
     r.color = tstree.root.color
@@ -99,6 +116,74 @@ if __name__ == "__main__":
                 child.color = c.color
                 child.label = str(child.color)
 
+    return color_spanning_tree, color_to_node_map
+
+
+def balance_jobs(lst, num_jobs):
+    def chunks(l, n):
+        """Yield n number of striped chunks from l."""
+        for i in range(0, n):
+            yield l[i::n]
+    r = Random(42)
+    # per = max(1, len(lst)//num_jobs)
+    r.shuffle(lst)
+    group = chunks(lst, num_jobs)
+
+    return [list(map(lambda x: x[1], sorted(g, reverse=True))) for g in group]
+
+
+
+
+if __name__ == "__main__":
+    mp.set_start_method('fork')
+
+    options, args = options_config()
+    options.occupancy_threshold = 35
+
+    with open(options.jplace_fp) as f:
+        jp = json.load(f)
+    tstree = read_tree_newick(jp["tree"])
+
+    index_to_node_map = {}
+    for e in tstree.traverse_postorder():
+        e.placements = []
+        if e != tstree.root:
+            index_to_node_map[e.edge_index] = e
+    aggregate_placements(index_to_node_map, jp["placements"])
+
+    min_tree_coloring_sum(tstree, float(options.threshold))
+
+    only_files = [f for f in listdir(options.alignment_dir_fp) if isfile(join(options.alignment_dir_fp, f))]
+
+    occupancy = {}
+    for aln in only_files:
+        aln_input_file = join(options.alignment_dir_fp, aln)
+        basename = splitext(aln)[0]
+        try:
+            fa_dict = fasta2dic(aln_input_file, options.protein_seqs, False)
+            for k in fa_dict.keys():
+                if k in occupancy:
+                    occupancy[k] += 1
+                else:
+                    occupancy[k] = 1
+        except e:
+            pass
+
+    for e in tstree.traverse_postorder(internal=False):
+        if e.label in occupancy:
+            e.occupancy = occupancy[e.label]
+
+    set_closest_three_directions(tstree)
+
+    # colors = {}
+    # for n in tstree.traverse_postorder():
+    #     if n.color not in colors:
+    #         colors[n.color] = [n]
+    #     else:
+    #         colors[n.color] += [n]
+
+    color_spanning_tree, color_to_node_map = build_color_spanning_tree(tstree)
+
     copyts = tstree.extract_tree_with(labels=tstree.labels())
     for n in copyts.traverse_preorder():
         n.outgroup = False
@@ -114,77 +199,107 @@ if __name__ == "__main__":
         cl, cr = n.children
         clcopy, crcopy = ncopy.children
 
-        if cl.color != n.color:
-            # replace it with representative
+        #                   C2
+        # case 1     C1  <
+        #                   C3
+        if cl.color != n.color and cr.color != n.color and cl.color != cr.color:
             ncopy.remove_child(clcopy)
-            clcopy_repr = ts.Node()
-            clcopy_repr.outgroup = True
-            lb, ln = n.closest_left
-            clcopy_repr.label = ln.label
-            clcopy_repr.edge_length = lb
-            ncopy.add_child(clcopy_repr)
+            outcl = copy.deepcopy(cl.repr_tree["down"])
+            ncopy.add_child(outcl.root)
 
-            # make child a new tree
+            ncopy.remove_child(crcopy)
+            outcr = copy.deepcopy(cr.repr_tree["down"])
+            ncopy.add_child(outcr.root)
+
+            newTreeL = ts.Tree()
+            newTreeL.is_rooted = False
+            newTreeL.root.outgroup = False
+            newTreeL.root.add_child(clcopy)
+            outcr = copy.deepcopy(cr.repr_tree["down"])
+            newTreeL.root.add_child(outcr.root)
+            outup = copy.deepcopy(n.repr_tree["up"])
+            if outup:
+                newTreeL.root.add_child(outup.root)
+            tree_catalog[cl.color] = newTreeL
+
+            newTreeR = ts.Tree()
+            newTreeR.is_rooted = False
+            newTreeR.root.outgroup = False
+            newTreeR.root.add_child(crcopy)
+            outcl = copy.deepcopy(cl.repr_tree["down"])
+            newTreeR.root.add_child(outcl.root)
+            outup = copy.deepcopy(n.repr_tree["up"])
+            if outup:
+                newTreeR.root.add_child(outup.root)
+            tree_catalog[cr.color] = newTreeR
+
+        #                   C1
+        # case 2     C1  <
+        #                   C3
+        if cl.color != n.color and cr.color == n.color and cl.color != cr.color:
+            ncopy.remove_child(clcopy)
+            outcl = copy.deepcopy(cl.repr_tree["down"])
+            ncopy.add_child(outcl.root)
+
+            newTreeL = ts.Tree()
+            newTreeL.is_rooted = False
+            newTreeL.root.outgroup = False
+            newTreeL.root.add_child(clcopy)
+            outcr = copy.deepcopy(cr.repr_tree["down"])
+            newTreeL.root.add_child(outcr.root)
+            outup = copy.deepcopy(n.repr_tree["up"])
+            if outup:
+                newTreeL.root.add_child(outup.root)
+            tree_catalog[cl.color] = newTreeL
+
+        #                   C3
+        # case 3     C1  <
+        #                   C1
+        if cl.color == n.color and cr.color != n.color and cl.color != cr.color:
+            ncopy.remove_child(crcopy)
+            outcr = copy.deepcopy(cr.repr_tree["down"])
+            ncopy.add_child(outcr.root)
+
+            newTreeR = ts.Tree()
+            newTreeR.is_rooted = False
+            newTreeR.root.outgroup = False
+            newTreeR.root.add_child(crcopy)
+            outcl = copy.deepcopy(cl.repr_tree["down"])
+            newTreeR.root.add_child(outcl.root)
+            outup = copy.deepcopy(n.repr_tree["up"])
+            if outup:
+                newTreeR.root.add_child(outup.root)
+            tree_catalog[cr.color] = newTreeR
+
+        #                   C3
+        # case 4     C1  <
+        #                   C3
+        if cl.color != n.color and cr.color != n.color and cl.color == cr.color:
+            ncopy.remove_child(clcopy)
+            outcl = copy.deepcopy(cl.repr_tree["down"])
+            ncopy.add_child(outcl.root)
+
+            ncopy.remove_child(crcopy)
+            outcr = copy.deepcopy(cr.repr_tree["down"])
+            ncopy.add_child(outcr.root)
+
             newTree = ts.Tree()
             newTree.is_rooted = False
             newTree.root.outgroup = False
             newTree.root.add_child(clcopy)
-            pb, pn = n.closest_top
-            if pn:
-                top_repr = ts.Node()
-                top_repr.outgroup = True
-                top_repr.label = pn.label
-                top_repr.edge_length = pb
-                newTree.root.add_child(top_repr)
+            newTree.root.add_child(crcopy)
 
-            crcopy_repr = ts.Node()
-            crcopy_repr.outgroup = True
-            rb, rn = n.closest_right
-            crcopy_repr.label = rn.label
-            crcopy_repr.edge_length = rb
-
-            if cl.color == cr.color:
-                ncopy.remove_child(crcopy)
-                ncopy.add_child(crcopy_repr)
-                newTree.root.add_child(crcopy)
-
-            else: # cr.color != n.color and cr.color != cl.color:
-                newTree.root.add_child(crcopy_repr)
-
+            outup = copy.deepcopy(n.repr_tree["up"])
+            if outup:
+                newTree.root.add_child(outup.root)
             tree_catalog[cl.color] = newTree
 
-        if cr.color != n.color and cr.color != cl.color:
-            ncopy.remove_child(crcopy)
-            crcopy_repr = ts.Node()
-            crcopy_repr.outgroup = True
-            rb, rn = n.closest_right
-            crcopy_repr.label = rn.label
-            crcopy_repr.edge_length = rb
-            ncopy.add_child(crcopy_repr)
-
-            # make child a new tree
-            newTree = ts.Tree()
-            newTree.is_rooted = False
-            newTree.root.outgroup = False
-            newTree.root.add_child(crcopy)
-            pb, pn = n.closest_top
-            if pn:
-                top_repr = ts.Node()
-                top_repr.outgroup = True
-                top_repr.label = pn.label
-                top_repr.edge_length = pb
-                newTree.root.add_child(top_repr)
-
-            clcopy_repr = ts.Node()
-            clcopy_repr.outgroup = True
-            lb, ln = n.closest_left
-            clcopy_repr.label = ln.label
-            clcopy_repr.edge_length = lb
-            newTree.root.add_child(clcopy_repr)
-            tree_catalog[cr.color] = newTree
-
-
-
+    for i, t in tree_catalog.items():
+        for e in t.traverse_postorder():
+            if not (hasattr(e, "outgroup") and e.outgroup is True):
+                e.outgroup = False
+            if not (hasattr(e, "resolved_randomly") and e.resolved_randomly is True):
+                e.resolved_randomly = False
     # stitching algorithm:
     # preorder traversal color_to_node_map
     # for each node n, find the joint j in tstree.
@@ -201,8 +316,8 @@ if __name__ == "__main__":
     pool.join()
 
     only_files = [f for f in listdir(options.alignment_dir_fp) if isfile(join(options.alignment_dir_fp, f))]
-    main_script = open(join(options.output_fp, "main_script.sh"), "w")
 
+    all_scripts = []
     for aln in only_files:
         aln_input_file = join(options.alignment_dir_fp, aln)
         basename = splitext(aln)[0]
@@ -215,12 +330,19 @@ if __name__ == "__main__":
             pool.close()
             pool.join()
             valid_scripts = [s for s in scripts if s is not None]
-            main_script.write("\n".join(valid_scripts))
-            main_script.write("\n")
+            all_scripts += valid_scripts
+            # main_script.write("\n".join(valid_scripts))
+            # main_script.write("\n")
         except e:
             print("Alignment %s is not a valid fasta alignment" % aln_input_file, file=sys.stderr)
 
-    main_script.close()
+    tasks = balance_jobs(all_scripts, options.num_tasks)
+    for i, t in enumerate(tasks):
+        main_script = open(join(options.output_fp, "main_script_%s.sh" % str(i)), "w")
+        main_script.write("\n".join(t))
+        main_script.write("\n")
+        main_script.close()
+
 
     # TODO a bipartition for each alignment
     for i, j in tree_catalog.items():
@@ -228,13 +350,11 @@ if __name__ == "__main__":
         for n in j.traverse_postorder():
             try:
                 if n.is_leaf():
-                    count +=1
+                    count += 1
                 elif n.outgroup is False and hasattr(n, 'placements'):
                     count += len(n.placements)
             except e:
                 pass
-        print (i, count)
-
-
+        print(i, count)
 
     print("hello")

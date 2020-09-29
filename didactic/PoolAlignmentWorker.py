@@ -1,4 +1,4 @@
-from os.path import join, isfile
+from os.path import join, isfile, abspath, expanduser
 from pathlib import Path
 import treeswift as ts
 import numpy as np
@@ -93,5 +93,5 @@ class PoolAlignmentWorker:
                             "--msa %s --model LG+G --prefix RUN --seed 12345 "
                             "--threads 1 > %s 2> %s \n"
                             % (fasttree_resolved_nwk, aln_output_path, raxml_out, raxml_err))
-                return script
+                return trimmed_aln_length*len(partition_aln), script
         return None

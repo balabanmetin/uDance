@@ -1,5 +1,6 @@
 from optparse import OptionParser
 from multiprocessing import cpu_count
+from sys import stderr
 
 
 def options_config():
@@ -26,13 +27,18 @@ def options_config():
                            "in subtree refinement", metavar="NUMBER")
     parser.add_option("-c", "--constrain-outgroups", dest="constrain_outgroups", action='store_true', default=False,
                       help="enforce outgroup topology on gene tree estimation stage.")
+    parser.add_option("-n", "--numtasks", dest="num_tasks", metavar='NUMBER', default="1",
+                      help="number of tasks where local refinement jobs will be split.")
 
     options, args = parser.parse_args()
 
     options.num_thread = int(options.num_thread)
     options.overlap_length = int(options.overlap_length)
+    options.num_tasks = int(options.num_tasks)
     if not options.num_thread:
         options.num_thread = cpu_count()
     #  options.output_fp = abspath(expanduser(options.output_fp))
-
+    if options.num_tasks < 1:
+        stderr.write("Invalid number of tasks. Number of tasks is set to the minimum value: 1.\n")
+        options.num_tasks = 1
     return (options, args)
