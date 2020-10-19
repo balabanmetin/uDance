@@ -11,7 +11,7 @@ from pathlib import Path
 from os import listdir
 from os.path import isfile, join, splitext
 from didactic.options import options_config
-from didactic.treecluster_sum import min_tree_coloring_sum
+from didactic.treecluster_sum import min_tree_coloring_sum, min_tree_coloring_sum_max
 from didactic.PoolPartitionWorker import PoolPartitionWorker
 from random import Random
 
@@ -151,7 +151,8 @@ if __name__ == "__main__":
             index_to_node_map[e.edge_index] = e
     aggregate_placements(index_to_node_map, jp["placements"])
 
-    min_tree_coloring_sum(tstree, float(options.threshold))
+    #min_tree_coloring_sum(tstree, float(options.threshold))
+    min_tree_coloring_sum_max(tstree, float(options.threshold), 0.02)
 
     only_files = [f for f in listdir(options.alignment_dir_fp) if isfile(join(options.alignment_dir_fp, f))]
 
@@ -351,7 +352,7 @@ if __name__ == "__main__":
             try:
                 if n.is_leaf():
                     count += 1
-                elif n.outgroup is False and hasattr(n, 'placements'):
+                if n.outgroup is False and hasattr(n, 'placements'):
                     count += len(n.placements)
             except e:
                 pass
