@@ -55,3 +55,34 @@ def min_tree_coloring_sum(tree, thr):
                     current.weight += lighter.weight
                 else:
                     paint(lighter, color); color += 1
+
+
+def min_tree_coloring_sum_max(tree, thr, max_thr):
+    prep(tree, 0)
+    color = 0
+    for current in tree.traverse_postorder():
+        if current == tree.root:
+            current.weight = float("inf")
+        else:
+            current.weight = len(current.placements)
+        if current.is_leaf():
+            current.weight += 1  # add leaf to it
+            current.farthest = 0
+        else:
+            left, right = current.children
+            if left.weight + right.weight + current.weight <= thr or \
+                    left.edge_length + left.farthest + right.edge_length + right.farthest < max_thr:
+                current.weight += left.weight + right.weight
+                current.farthest = max(left.edge_length + left.farthest, right.edge_length + right.farthest)
+            elif left.weight + right.weight <= thr:
+                paint(left, color); paint(right, color); color += 1
+                current.farthest = 0
+            else:
+                heavier, lighter = (left, right) if left.weight > right.weight else (right, left)
+                paint(heavier, color); color += 1
+                current.farthest = lighter.farthest + lighter.edge_length
+                if lighter.weight + current.weight <= thr:
+                    current.weight += lighter.weight
+                else:
+                    paint(lighter, color); color += 1
+                    current.farthest = 0
