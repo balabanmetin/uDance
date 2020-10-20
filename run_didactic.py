@@ -173,6 +173,8 @@ if __name__ == "__main__":
     for e in tstree.traverse_postorder(internal=False):
         if e.label in occupancy:
             e.occupancy = occupancy[e.label]
+        else:
+            e.occupancy = 0
 
     set_closest_three_directions(tstree)
 
