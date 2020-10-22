@@ -1,3 +1,5 @@
+import os
+import stat
 from os.path import join, isfile, abspath, expanduser
 from pathlib import Path
 import treeswift as ts
@@ -58,10 +60,12 @@ class PoolAlignmentWorker:
                         f.write(compute_bipartition_alignment(induced_constraints_tree.__str__()))
                     induced_raxml_constraint_path = join(aln_outdir, "raxml_constraint.nwk")
                     induced_constraints_tree.write_tree_newick(induced_raxml_constraint_path)
+                    with open(induced_constraints_tree, "a") as a_file:
+                        a_file.write("\n")
 
             script = join(aln_outdir, "run.sh")
             with open(script, "w") as f:
-                f.write("#! /usr/bin/env bash\n\n")
+                f.write("#!/usr/bin/env bash\n\n")
                 f.write("export OMP_NUM_THREADS=1\n\n")
                 bipartition_path = join(aln_outdir, "bipartition.fasta")
                 fasttree_log = join(aln_outdir, "fasttree.log")
@@ -86,14 +90,16 @@ class PoolAlignmentWorker:
                 if isfile(induced_raxml_constraint_path) and cls.options.constrain_outgroups:
                     f.write("raxml-ng --tree %s --tree-constraint %s "
                             "--msa %s --model LG+G --prefix %s --seed 12345 "
-                            "--threads 1 > %s 2> %s \n"
+                            "--threads 4 > %s 2> %s \n"
                             % (fasttree_resolved_nwk, induced_raxml_constraint_path, aln_output_path,
                                raxml_run, raxml_out, raxml_err))
                 else:
                     f.write("raxml-ng --tree %s "
                             "--msa %s --model LG+G --prefix %s --seed 12345 "
-                            "--threads 1 > %s 2> %s \n"
+                            "--threads 4 > %s 2> %s \n"
                             % (fasttree_resolved_nwk, aln_output_path,
                                raxml_run, raxml_out, raxml_err))
-                return trimmed_aln_length*len(partition_aln), script
+            st = os.stat(script)
+            os.chmod(script, st.st_mode | stat.S_IEXEC)
+            return trimmed_aln_length*len(partition_aln), script
         return None

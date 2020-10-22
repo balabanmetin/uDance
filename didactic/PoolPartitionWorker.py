@@ -29,6 +29,8 @@ class PoolPartitionWorker:
         cls._undo_resolve_polytomies(j)
         newick_path = join(partition_output_dir, "astral_constraint.nwk")
         j.write_tree_newick(newick_path)
+        with open(newick_path, "a") as a_file:
+            a_file.write("\n")
 
         # find all outgroups
         outgroups = [n.label for n in j.traverse_postorder() if n.outgroup]
@@ -40,6 +42,8 @@ class PoolPartitionWorker:
                 f.write(compute_bipartition_alignment(constraint.__str__()))
             raxml_constraint_path = join(partition_output_dir, "raxml_constraint.nwk")
             constraint.write_tree_newick(raxml_constraint_path)
+            with open(raxml_constraint_path, "a") as a_file:
+                a_file.write("\n")
 
         species_list_path = join(partition_output_dir, "species.txt")
         species_list = []
