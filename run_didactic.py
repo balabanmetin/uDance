@@ -137,7 +137,7 @@ if __name__ == "__main__":
     mp.set_start_method('fork')
 
     options, args = options_config()
-    options.occupancy_threshold = 35
+    options.occupancy_threshold = 100
 
     with open(options.jplace_fp) as f:
         jp = json.load(f)
@@ -194,7 +194,7 @@ if __name__ == "__main__":
     traversal = list(zip(tstree.traverse_preorder(), copyts.traverse_preorder()))
     tree_catalog = {}
 
-    outgroup_map = {-1: {"up": None, "children": dict()}}
+    outgroup_map = {-1: {"up": None, "ownsup": False, "children": dict()}}
     for n, ncopy in traversal:
         ncopy.resolved_randomly = n.resolved_randomly
         ncopy.placements = n.placements
@@ -226,7 +226,7 @@ if __name__ == "__main__":
             outup = copy.deepcopy(n.repr_tree["up"])
             if outup:
                 newTreeL.root.add_child(outup.root)
-            outgroup_map[cl.color] = {"up": newTreeL.newick(), "children": dict()}
+            outgroup_map[cl.color] = {"up": newTreeL.newick(), "ownsup": True, "children": dict()}
             newTreeL.root.add_child(clcopy)
             tree_catalog[cl.color] = newTreeL
 
@@ -238,7 +238,7 @@ if __name__ == "__main__":
             outup = copy.deepcopy(n.repr_tree["up"])
             if outup:
                 newTreeR.root.add_child(outup.root)
-            outgroup_map[cr.color] = {"up": newTreeR.newick(), "children": dict()}
+            outgroup_map[cr.color] = {"up": newTreeR.newick(), "ownsup": True, "children": dict()}
             newTreeR.root.add_child(crcopy)
             tree_catalog[cr.color] = newTreeR
 
@@ -259,7 +259,7 @@ if __name__ == "__main__":
             outup = copy.deepcopy(n.repr_tree["up"])
             if outup:
                 newTreeL.root.add_child(outup.root)
-            outgroup_map[cl.color] = {"up": newTreeL.newick(), "children": dict()}
+            outgroup_map[cl.color] = {"up": newTreeL.newick(), "ownsup": True, "children": dict()}
             newTreeL.root.add_child(clcopy)
             tree_catalog[cl.color] = newTreeL
 
@@ -280,7 +280,7 @@ if __name__ == "__main__":
             outup = copy.deepcopy(n.repr_tree["up"])
             if outup:
                 newTreeR.root.add_child(outup.root)
-            outgroup_map[cr.color] = {"up": newTreeR.newick(), "children": dict()}
+            outgroup_map[cr.color] = {"up": newTreeR.newick(), "ownsup": True,  "children": dict()}
             newTreeR.root.add_child(crcopy)
             tree_catalog[cr.color] = newTreeR
 
@@ -314,9 +314,9 @@ if __name__ == "__main__":
             outup = copy.deepcopy(n.repr_tree["up"])
             if outup:
                 newTree.root.add_child(outup.root)
-                outgroup_map[cr.color] = {"up": newTree.newick(), "children": dict()}
+                outgroup_map[cr.color] = {"up": newTree.newick(), "ownsup": False, "children": dict()}
             else:
-                outgroup_map[cr.color] = {"up": None, "children": dict()}
+                outgroup_map[cr.color] = {"up": None, "ownsup": False, "children": dict()}
             newTree.root.add_child(clcopy)
             newTree.root.add_child(crcopy)
             tree_catalog[cl.color] = newTree

@@ -72,10 +72,10 @@ class PoolAlignmentWorker:
                 fasttree_err = join(aln_outdir, "fasttree.err")
                 fasttree_nwk = join(aln_outdir, "fasttree.nwk")
                 if isfile(bipartition_path) and cls.options.constrain_outgroups:
-                    f.write("FastTree -constraints %s -log %s < %s > %s 2> %s \n"
+                    f.write("FastTreeMP -constraints %s -log %s < %s > %s 2> %s \n"
                             % (bipartition_path, fasttree_log, aln_output_path, fasttree_nwk, fasttree_err))
                 else:
-                    f.write("FastTree -log %s < %s > %s 2> %s \n"
+                    f.write("FastTreeMP -log %s < %s > %s 2> %s \n"
                             % (fasttree_log, aln_output_path, fasttree_nwk, fasttree_err))
 
                 fasttree_resolved_nwk = join(aln_outdir, "fasttree_resolved.nwk")
