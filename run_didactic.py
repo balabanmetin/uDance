@@ -314,9 +314,9 @@ if __name__ == "__main__":
             outup = copy.deepcopy(n.repr_tree["up"])
             if outup:
                 newTree.root.add_child(outup.root)
-                outgroup_map[cr.color]["up"] = newTree.newick()
+                outgroup_map[cr.color] = {"up": newTree.newick(), "children": dict()}
             else:
-                outgroup_map[cr.color]["up"] = None
+                outgroup_map[cr.color] = {"up": None, "children": dict()}
             newTree.root.add_child(clcopy)
             newTree.root.add_child(crcopy)
             tree_catalog[cl.color] = newTree
