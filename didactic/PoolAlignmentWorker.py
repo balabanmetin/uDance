@@ -34,18 +34,38 @@ class PoolAlignmentWorker:
             not_all_gap = np.logical_or(not_all_gap, (s != b'-'))
         for k, v in partition_aln.items():
             partition_aln[k] = v[not_all_gap]
-
         trimmed_aln_length = len(next(iter(partition_aln.values())))
-        if trimmed_aln_length >= cls.options.overlap_length and len(partition_aln) >= 4:
+
+        #deduplicate the alignment
+        seq_keyed_dict = {}
+        for name, sba in partition_aln.items():
+            seq = sba.tostring().decode("UTF-8")
+            if seq in seq_keyed_dict:
+                seq_keyed_dict[seq].append(name)
+            else:
+                seq_keyed_dict[seq] = [name]
+
+        if trimmed_aln_length >= cls.options.overlap_length and len(seq_keyed_dict) >= 4:
             # write trimmed MSA fasta
+            res = []
+            duplist = []
+            for k, v in seq_keyed_dict.items():
+                res.append(">" + v[0])
+                res.append(k)
+                if len(v) > 1:
+                    duplist.append("\t".join(v))
+
             partition_output_dir = join(cls.options.output_fp, str(i))
             aln_outdir = join(partition_output_dir, cls.basename)
             Path(aln_outdir).mkdir(parents=True, exist_ok=True)
             aln_output_path = join(aln_outdir, "aln.fa")
+            dupmap_output_path = join(aln_outdir, "dupmap.txt")
             with open(aln_output_path, "w", buffering=100000000) as f:
-                for k, v in partition_aln.items():
-                    f.write(">" + k + "\n")
-                    f.write(v.tostring().decode("UTF-8") + "\n")
+                f.write("\n".join(res))
+                f.write("\n")
+            with open(dupmap_output_path, "w", buffering=100000000) as f:
+                f.write("\n".join(duplist))
+                f.write("\n")
 
             constraint_outgroup_tree = join(partition_output_dir, "raxml_constraint.nwk")
             if isfile(constraint_outgroup_tree) and cls.options.constrain_outgroups:

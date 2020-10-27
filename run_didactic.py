@@ -184,6 +184,7 @@ if __name__ == "__main__":
     #     else:
     #         colors[n.color] += [n]
 
+    Path(options.output_fp).mkdir(parents=True, exist_ok=True)
     color_spanning_tree, color_to_node_map = build_color_spanning_tree(tstree)
     color_spanning_tree.write_tree_newick(join(options.output_fp, "color_spanning_tree.nwk"))
 
@@ -335,7 +336,6 @@ if __name__ == "__main__":
     # find LCA of j.left_closest_child and j.right_closest_child in n
     # replace it with n.children
 
-    Path(options.output_fp).mkdir(parents=True, exist_ok=True)
     partition_worker = PoolPartitionWorker()
     partition_worker.set_class_attributes(options)
 
