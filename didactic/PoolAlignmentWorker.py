@@ -88,13 +88,13 @@ class PoolAlignmentWorker:
                 raxml_out = join(aln_outdir, "raxml.out")
                 raxml_run = join(aln_outdir, "RUN")
                 if isfile(induced_raxml_constraint_path) and cls.options.constrain_outgroups:
-                    f.write("raxml-ng --tree %s --tree-constraint %s "
+                    f.write("raxml-ng --force perf_threads --tree %s --tree-constraint %s "
                             "--msa %s --model LG+G --prefix %s --seed 12345 "
                             "--threads 4 > %s 2> %s \n"
                             % (fasttree_resolved_nwk, induced_raxml_constraint_path, aln_output_path,
                                raxml_run, raxml_out, raxml_err))
                 else:
-                    f.write("raxml-ng --tree %s "
+                    f.write("raxml-ng --force perf_threads --tree %s "
                             "--msa %s --model LG+G --prefix %s --seed 12345 "
                             "--threads 4 > %s 2> %s \n"
                             % (fasttree_resolved_nwk, aln_output_path,
