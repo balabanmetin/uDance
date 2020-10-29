@@ -107,12 +107,11 @@ def build_color_spanning_tree(tstree):
         if n.is_leaf():
             continue
         for c in n.children:
-            if c.color != n.color:
+            if c.color != n.color and c.color not in color_to_node_map:
                 par = color_to_node_map[n.color]
                 child = ts.Node()
                 par.add_child(child)
                 color_to_node_map[c.color] = child
-                child.joint = n
                 child.color = c.color
                 child.label = str(child.color)
 
@@ -187,7 +186,6 @@ if __name__ == "__main__":
     Path(options.output_fp).mkdir(parents=True, exist_ok=True)
     color_spanning_tree, color_to_node_map = build_color_spanning_tree(tstree)
     color_spanning_tree.write_tree_newick(join(options.output_fp, "color_spanning_tree.nwk"))
-
     copyts = tstree.extract_tree_with(labels=tstree.labels())
     for n in copyts.traverse_preorder():
         n.outgroup = False
