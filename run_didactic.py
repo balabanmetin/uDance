@@ -14,6 +14,7 @@ from didactic.options import options_config
 from didactic.treecluster_sum import min_tree_coloring_sum, min_tree_coloring_sum_max
 from didactic.PoolPartitionWorker import PoolPartitionWorker
 from random import Random
+import glob
 
 
 # inputs: a placement tree
@@ -369,6 +370,18 @@ if __name__ == "__main__":
         main_script.write("\n".join(t))
         main_script.write("\n")
         main_script.close()
+
+    indvalns = glob.glob(join(options.output_fp, '*/*/aln.fa'))
+
+    with open(join(options.output_fp, "jobsizes.txt"), "w", buffering=10000000) as js:
+        for p in indvalns:
+            count = 0
+            for line in open(p).readlines():
+                if line.startswith(">"):
+                    count += 1
+            par, gene = p.split("/")[-3:-1]
+            js.write(par + "\t" + gene + "\t" + str(count) + "\n")
+
 
     # TODO a bipartition for each alignment
     for i, j in tree_catalog.items():
