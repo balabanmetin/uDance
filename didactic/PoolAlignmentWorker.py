@@ -59,13 +59,14 @@ class PoolAlignmentWorker:
             aln_outdir = join(partition_output_dir, cls.basename)
             Path(aln_outdir).mkdir(parents=True, exist_ok=True)
             aln_output_path = join(aln_outdir, "aln.fa")
-            dupmap_output_path = join(aln_outdir, "dupmap.txt")
             with open(aln_output_path, "w", buffering=100000000) as f:
                 f.write("\n".join(res))
                 f.write("\n")
-            with open(dupmap_output_path, "w", buffering=100000000) as f:
-                f.write("\n".join(duplist))
-                f.write("\n")
+            if duplist:
+                dupmap_output_path = join(aln_outdir, "dupmap.txt")
+                with open(dupmap_output_path, "w", buffering=100000000) as f:
+                    f.write("\n".join(duplist))
+                    f.write("\n")
 
             constraint_outgroup_tree = join(partition_output_dir, "raxml_constraint.nwk")
             if isfile(constraint_outgroup_tree) and cls.options.constrain_outgroups:
