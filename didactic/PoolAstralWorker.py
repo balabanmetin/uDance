@@ -50,11 +50,13 @@ class PoolAstralWorker:
 
         astral_output_file = join(partition_output_dir, "astral_output.nwk")
         astral_log_file = join(partition_output_dir, "astral.log")
+        astral_const_file = join(partition_output_dir, "astral_constraint.nwk")
 
-        s = ["java", "-jar", cls.astral_exec, "-i", astral_input_file, "-o", astral_output_file]
+        s = ["java", "-jar", cls.astral_exec, "-i", astral_input_file,
+             "-o", astral_output_file, "-j", astral_const_file , "2>", astral_log_file]
+        return " ".join(s) + "\n"
 
-        with open(astral_log_file, "w") as lg:
-            with Popen(s, stdout=PIPE, stdin=PIPE, stderr=lg) as p:
-                astral_stdout = p.stdout.read().decode('utf-8')
-                #print(astral_stdout)
-        pass
+        # with open(astral_log_file, "w") as lg:
+        #     with Popen(s, stdout=PIPE, stdin=PIPE, stderr=lg) as p:
+        #         astral_stdout = p.stdout.read().decode('utf-8')
+        #         #print(astral_stdout)
