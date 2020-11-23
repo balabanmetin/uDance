@@ -5,6 +5,7 @@ from os.path import abspath, expanduser
 from sys import stderr
 from didactic.decompose import decompose
 from didactic.refine import refine
+from didactic.stitch import stitch
 
 
 def options_config():
@@ -70,6 +71,18 @@ def options_config():
                                  "0 to use all cores in the running machine", metavar="NUMBER")
 
     parser_ref.set_defaults(func=refine)
+
+    # stitch command subparser
+    parser_sti = subparsers.add_parser('stitch',
+                                       description='Stitch back locally refined trees')
+    parser_sti.add_argument("-o", "--output", dest="output_fp",
+                            help="path for the output directory where files will be placed",
+                            metavar="DIRECTORY")
+    parser_sti.add_argument("-T", "--threads", type=int, dest="num_thread", default=0,
+                            help="number of cores used in placement. "
+                                 "0 to use all cores in the running machine", metavar="NUMBER")
+
+    parser_sti.set_defaults(func=stitch)
 
     options = parser.parse_args()
 

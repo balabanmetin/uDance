@@ -303,7 +303,7 @@ def decompose(options):
             newTreeR.root.outgroup = False
             outcl = copy.deepcopy(cl.repr_tree["down"])
             newTreeR.root.add_child(outcl.root)
-            outce = copy.deepcopy(cr.repr_tree["down"])
+            outcr = copy.deepcopy(cr.repr_tree["down"])
             newTreeR.root.add_child(outcr.root)
             outgroup_map[n.color]["children"][cr.color] = newTreeR.newick()
 
