@@ -56,6 +56,7 @@ def subsample_partition(partition_output_dir, cutoff):
     start = time.time()
     #print (counts_i)
     x = np.minimum(counts_i[...,np.newaxis],counts_i[np.newaxis,...]) - counts_ij
+    x.dump(join(partition_output_dir, "adj_mat.pkl"))
     #print(x)
     y = (x <= cutoff)
     print("redo %.3f." % (time.time() - start))
