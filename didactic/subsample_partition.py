@@ -13,8 +13,8 @@ def subsample_partition(partition_output_dir, cutoff):
         numspecies = len(species)
     ind_to_name = dict(enumerate(species))
     name_to_ind = {v: k for k, v in ind_to_name.items()}
-    counts_ij = np.zeros((numspecies, numspecies), dtype=int)
-    counts_i = np.zeros((numspecies, ), dtype=int)
+    counts_ij = np.zeros((numspecies, numspecies), dtype=np.int16)
+    counts_i = np.zeros((numspecies, ), dtype=np.int16)
     genes = glob(join(partition_output_dir, "*", ""))
     print("number of genes %d. " % len(genes))
 
@@ -42,10 +42,10 @@ def subsample_partition(partition_output_dir, cutoff):
                                 continue
                             counts_ij[i][j] += 1
                 else:
-                    dupcounts_i = np.zeros((numspecies,), dtype=int)
+                    dupcounts_i = np.zeros((numspecies,), dtype=np.int16)
                     for i in things:
                         dupcounts_i[i] = 1
-                    dupcounts_ij = np.logical_and(dupcounts_i[..., np.newaxis], dupcounts_i[np.newaxis, ...]).astype(int)
+                    dupcounts_ij = np.logical_and(dupcounts_i[..., np.newaxis], dupcounts_i[np.newaxis, ...]).astype(np.int16)
                     np.fill_diagonal(dupcounts_ij, 0)
                     counts_ij += dupcounts_ij
 
@@ -56,7 +56,7 @@ def subsample_partition(partition_output_dir, cutoff):
     start = time.time()
     #print (counts_i)
     x = np.minimum(counts_i[...,np.newaxis],counts_i[np.newaxis,...]) - counts_ij
-    x.dump(join(partition_output_dir, "adj_mat.pkl"))
+    x.dump(join(partition_output_dir, "adj_mat.pkl"), protocol=4)
     #print(x)
     y = (x <= cutoff)
     print("redo %.3f." % (time.time() - start))
