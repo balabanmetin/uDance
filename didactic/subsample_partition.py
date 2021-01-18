@@ -46,7 +46,7 @@ def subsample_partition(partition_output_dir, cutoff):
                     for i in things:
                         dupcounts_i[i] = 1
                     dupcounts_ij = np.logical_and(dupcounts_i[..., np.newaxis], dupcounts_i[np.newaxis, ...]).astype(np.int16)
-                    np.fill_diagonal(dupcounts_ij, 0)
+                    #np.fill_diagonal(dupcounts_ij, 0)
                     counts_ij += dupcounts_ij
 
 
@@ -54,11 +54,12 @@ def subsample_partition(partition_output_dir, cutoff):
     print("counting neigh %.3f." % (time.time() - start))
     # print(counts_ij[52][53], counts_i[52], counts_i[53])
     start = time.time()
-    #print (counts_i)
-    x = np.minimum(counts_i[...,np.newaxis],counts_i[np.newaxis,...]) - counts_ij
+    #print (counts_ij)
+    #print((counts_ij/np.minimum(counts_i[...,np.newaxis],counts_i[np.newaxis,...])).max())
+    x = counts_ij/np.minimum(counts_i[...,np.newaxis],counts_i[np.newaxis,...])
     x.dump(join(partition_output_dir, "adj_mat.pkl"), protocol=4)
     #print(x)
-    y = (x <= cutoff)
+    y = (x >= cutoff)
     print("redo %.3f." % (time.time() - start))
     start = time.time()
     n, components = connected_components(y)
