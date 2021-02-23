@@ -6,6 +6,7 @@ from didactic.fasta2dic import readfq
 from scipy.sparse.csgraph import connected_components
 import time
 import treeswift as ts
+import itertools
 
 
 def subsample_partition(partition_output_dir, cutoff):
@@ -71,11 +72,26 @@ def subsample_partition(partition_output_dir, cutoff):
     print("redo %.3f." % (time.time() - start))
     start = time.time()
     n, components = connected_components(y)
-    pruned_species = []
-    for i in range(1, len(components)):
-        if components[i-1] >= components[i]:
-            pruned_species.append(ind_to_name[i])
     print("components %.3f." % (time.time() - start))
+
+    organized_components = dict()
+    for i, comp_id in enumerate(components):
+        if comp_id in organized_components:
+            organized_components[comp_id].append(i)
+        else:
+            organized_components[comp_id] = [i]
+
+    pruned_species = []
+    dupmapstr = ""
+    for v in organized_components.values():
+        components_member_names = list(map(lambda x: ind_to_name[x], v))
+        pruned_species += components_member_names[1:]
+        if len(components_member_names) > 1:
+            dupmapstr += "\t".join(components_member_names)+"\n"
+    if dupmapstr:
+        with open(join(partition_output_dir, "pruning_dupmap.txt"), "w") as f:
+            f.write(dupmapstr)
+
     if len(pruned_species) == 0:
         return
     pruned_species = set(pruned_species)
