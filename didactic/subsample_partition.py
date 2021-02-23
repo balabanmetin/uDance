@@ -5,12 +5,19 @@ from pathlib import Path
 from didactic.fasta2dic import readfq
 from scipy.sparse.csgraph import connected_components
 import time
+import treeswift as ts
 
 
 def subsample_partition(partition_output_dir, cutoff):
     with open(join(partition_output_dir, "species.txt")) as f:
-        species = list(map(lambda x: x.strip(), f.readlines()))
-        numspecies = len(species)
+        species = set(map(lambda x: x.strip(), f.readlines()))
+    t = ts.read_tree_newick(join(partition_output_dir, "astral_constraint.nwk"))
+    tlabs = t.labels(internal=False)
+    for i in tlabs:
+        if i in species:
+            species.remove(i)
+
+    numspecies = len(species)
     ind_to_name = dict(enumerate(species))
     name_to_ind = {v: k for k, v in ind_to_name.items()}
     counts_ij = np.zeros((numspecies, numspecies), dtype=np.int16)
@@ -21,18 +28,19 @@ def subsample_partition(partition_output_dir, cutoff):
     start = time.time()
     for g in genes:
         print(g)
-        dupmap_path = Path(join(g,"dupmap.txt"))
-        if not dupmap_path.is_file():
-            continue
+
         with open(join(g, "aln.fa")) as af:
-            glabels = [name_to_ind[name] for name, seq, _ in readfq(af)]
+            glabels = [name_to_ind[name] for name, seq, _ in readfq(af) if name in name_to_ind]
             for i in glabels:
                 counts_i[i] += 1
 
+        dupmap_path = Path(join(g,"dupmap.txt"))
+        if not dupmap_path.is_file():  # every sequence in the alignment is unique
+            continue
         with open(dupmap_path) as f:
             for line in f.readlines():
-                things = [name_to_ind[j] for j in line.strip().split("\t")]
-                for i in things[1:]:
+                things = [name_to_ind[j] for j in line.strip().split("\t")[1:] if j in name_to_ind]
+                for i in things:
                     counts_i[i] += 1
 
                 if len(things) <= np.sqrt(numspecies):
@@ -63,6 +71,58 @@ def subsample_partition(partition_output_dir, cutoff):
     print("redo %.3f." % (time.time() - start))
     start = time.time()
     n, components = connected_components(y)
+    pruned_species = []
+    for i in range(1, len(components)):
+        if components[i-1] >= components[i]:
+            pruned_species.append(ind_to_name[i])
     print("components %.3f." % (time.time() - start))
+    if len(pruned_species) == 0:
+        return
+    pruned_species = set(pruned_species)
+
+    for g in genes:
+        aln_dict = dict()
+        with open(join(g, "aln.fa")) as af:
+            for name, seq, _ in readfq(af):
+                aln_dict[name] = seq
+
+        dupmap_path = Path(join(g, "dupmap.txt"))
+        if dupmap_path.is_file():
+            with open(dupmap_path) as f:
+                for line in f.readlines():
+                    things = line.strip().split("\t")
+                    for i in things[1:]:
+                        aln_dict[i] = aln_dict[things[0]]
+        for i in pruned_species:
+            if i in aln_dict:
+                del aln_dict[i]
+
+        #deduplicate the alignment
+        seq_keyed_dict = {}
+        for name, seq in aln_dict.items():
+            if seq in seq_keyed_dict:
+                seq_keyed_dict[seq].append(name)
+            else:
+                seq_keyed_dict[seq] = [name]
+
+        if len(seq_keyed_dict) >= 4:
+            # write trimmed MSA fasta
+            res = []
+            duplist = []
+            for k, v in seq_keyed_dict.items():
+                res.append(">" + v[0])
+                res.append(k)
+                if len(v) > 1:
+                    duplist.append("\t".join(v))
+
+            aln_output_path = join(g, "aln_pruned.fa")
+            with open(aln_output_path, "w", buffering=100000000) as f:
+                f.write("\n".join(res))
+                f.write("\n")
+            if duplist:
+                dupmap_output_path = join(g, "dupmap_pruned.txt")
+                with open(dupmap_output_path, "w", buffering=100000000) as f:
+                    f.write("\n".join(duplist))
+                    f.write("\n")
     print(n)
     return
