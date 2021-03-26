@@ -35,22 +35,37 @@ def stitch(options):
                 break
         astral_tree_par.is_rooted = True
         astral_tree_par.reroot(notuptree_species.parent)
+        astral_tree_par.suppress_unifurcations()
         mrca = astral_tree_par.mrca(list(uptree_labels))
+        astral_tree_par.reroot(mrca)
+        astral_tree_par.suppress_unifurcations()
         if outmap_par['ownsup']:
-            astral_tree_par.reroot(mrca)
+            deletelist = []
+            for c in astral_tree_par.root.children:
+                for llab in c.traverse_postorder(internal=False):
+                    if llab.label in uptree_labels:
+                        deletelist += [c]
+                        break
+
+            for i in deletelist:
+                for j in i.traverse_postorder(internal=False):
+                    if j.label not in uptree_labels:
+                        removed.add(j.label + "\t" + node.label)
+                astral_tree_par.root.remove_child(i)
+            if len(astral_tree_par.root.children) != 1:
+                raise ValueError('Astral tree is not binary.')
+            astral_tree_par.root = astral_tree_par.root.children[0]  # get rid of the degree 2 node
         else:
-            astral_tree_par.reroot(mrca)  # TODO handle ownsup=false case. for now assume it always owns
-        deletelist = []
-        for c in astral_tree_par.root.children:
-            for llab in c.traverse_postorder(internal=False):
-                if llab.label in uptree_labels:
-                    deletelist += [c]
-                    break
-        for i in deletelist:
-            for j in i.traverse_postorder(internal=False):
+            non_uptree = astral_tree_cons_labels.difference(uptree_labels)
+            non_uptree_mrca = astral_tree_par.mrca(list(non_uptree))
+            to_be_deleted = astral_tree_par
+            non_uptree_mrca.parent.remove_child(non_uptree_mrca)
+            for j in to_be_deleted.traverse_postorder(internal=False):
                 if j.label not in uptree_labels:
                     removed.add(j.label + "\t" + node.label)
-            astral_tree_par.root.remove_child(i)
+            astral_tree_par = ts.Tree()
+            astral_tree_par.is_rooted = True
+            astral_tree_par.root = non_uptree_mrca
 
         for c in node.children:
             ctree = _stitch(c)
@@ -59,7 +74,7 @@ def stitch(options):
             c_rep_tree_mrca = astral_tree_par.mrca(list(c_rep_tree_labels))
             for j in c_rep_tree_mrca.traverse_postorder(internal=False):
                 if j.label not in c_rep_tree_labels:
-                    removed.add(j.label+ "\t" + node.label)
+                    removed.add(j.label + "\t" + node.label)
             c_rep_tree_mrca_parent = c_rep_tree_mrca.parent
             c_rep_tree_mrca_parent.remove_child(c_rep_tree_mrca)
             c_rep_tree_mrca_parent.add_child(ctree.root)

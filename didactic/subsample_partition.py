@@ -6,7 +6,6 @@ from didactic.fasta2dic import readfq
 from scipy.sparse.csgraph import connected_components
 import time
 import treeswift as ts
-import itertools
 
 
 def subsample_partition(partition_output_dir, cutoff):
@@ -29,7 +28,6 @@ def subsample_partition(partition_output_dir, cutoff):
     start = time.time()
     for g in genes:
         print(g)
-
         with open(join(g, "aln.fa")) as af:
             glabels = [name_to_ind[name] for name, seq, _ in readfq(af) if name in name_to_ind]
             for i in glabels:
