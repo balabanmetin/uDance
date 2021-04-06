@@ -29,6 +29,7 @@ def stitch(options):
         uptree_labels = set(uptree.labels(internal=False))
         astral_tree_cons_labels = set(astral_tree_cons.labels(internal=False))
 
+        astral_tree_par.root.edge_length = None
         for i in astral_tree_par.traverse_postorder(internal=False):
             if i.label not in uptree_labels and i.label in astral_tree_cons_labels:
                 notuptree_species = i   # this has to be a backbone species
