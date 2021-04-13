@@ -4,7 +4,6 @@ import treeswift as ts
 
 
 def stitch(options):
-
     outmap_file = join(options.output_fp, "outgroup_map.json")
     with open(outmap_file) as o:
         outmap = json.load(o)
@@ -13,6 +12,7 @@ def stitch(options):
     cg = ts.read_tree_newick(cg_file)
 
     removed = set()
+
     def _stitch(node):
         if node.label == "-1":
             mytree = ts.Tree()
@@ -28,10 +28,11 @@ def stitch(options):
         uptree = ts.read_tree_newick(outmap_par["up"])
         uptree_labels = set(uptree.labels(internal=False))
         astral_tree_cons_labels = set(astral_tree_cons.labels(internal=False))
+        non_uptree = astral_tree_cons_labels.difference(uptree_labels)
 
         astral_tree_par.root.edge_length = None
         for i in astral_tree_par.traverse_postorder(internal=False):
-            if i.label not in uptree_labels and i.label in astral_tree_cons_labels:
+            if i.label in non_uptree:
                 notuptree_species = i   # this has to be a backbone species
                 break
         astral_tree_par.is_rooted = True
@@ -57,7 +58,6 @@ def stitch(options):
                 raise ValueError('Astral tree is not binary.')
             astral_tree_par.root = astral_tree_par.root.children[0]  # get rid of the degree 2 node
         else:
-            non_uptree = astral_tree_cons_labels.difference(uptree_labels)
             non_uptree_mrca = astral_tree_par.mrca(list(non_uptree))
             to_be_deleted = astral_tree_par
             non_uptree_mrca.parent.remove_child(non_uptree_mrca)
@@ -69,16 +69,45 @@ def stitch(options):
             astral_tree_par.root = non_uptree_mrca
 
         for c in node.children:
+            ownsup_child = outmap[c.label]["ownsup"]
             ctree = _stitch(c)
             c_rep_tree = ts.read_tree_newick(outmap_par["children"][c.label])
             c_rep_tree_labels = set(c_rep_tree.labels(internal=False))
             c_rep_tree_mrca = astral_tree_par.mrca(list(c_rep_tree_labels))
+            c_rep_tree_mrca_parent = c_rep_tree_mrca.parent
             for j in c_rep_tree_mrca.traverse_postorder(internal=False):
                 if j.label not in c_rep_tree_labels:
                     removed.add(j.label + "\t" + node.label)
-            c_rep_tree_mrca_parent = c_rep_tree_mrca.parent
-            c_rep_tree_mrca_parent.remove_child(c_rep_tree_mrca)
-            c_rep_tree_mrca_parent.add_child(ctree.root)
+            # if child does not own its "up" edge, only misplaced queries are under the mrca of child representatives.
+            # in that case, the edge length of the mrca node comes from the current subtree, not from the child.
+            if not ownsup_child:
+                mrca_len = c_rep_tree_mrca.edge_length
+                c_rep_tree_mrca_parent.remove_child(c_rep_tree_mrca)
+                ctree.root.edge_length = mrca_len
+                c_rep_tree_mrca_parent.add_child(ctree.root)
+            #  if child owns its "up" edge, there are potentially misplaced queries above the mrca.
+            #  starting from the mrca, we traverse on the path from mrca to the root until we find an internal node
+            #  with least one descendant from backbone
+            else:
+                current = c_rep_tree_mrca
+                parent = c_rep_tree_mrca_parent
+                while parent != astral_tree_par.root:
+                    has_non_uptree_species = False
+                    for cp in parent.children:
+                        if cp == current:
+                            continue
+                        for i in cp.traverse_postorder():
+                            if i.label in non_uptree:
+                                has_non_uptree_species = True
+                    if has_non_uptree_species:
+                        break
+                    current = parent
+                    parent = current.parent
+                for j in current.traverse_postorder(internal=False):
+                    if j.label not in c_rep_tree_labels:
+                        removed.add(j.label + "\t" + node.label)
+                parent.remove_child(current)
+                parent.add_child(ctree.root)
 
         return astral_tree_par
     stitched_tree = _stitch(cg.root)
