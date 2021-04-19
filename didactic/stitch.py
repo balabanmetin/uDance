@@ -151,10 +151,7 @@ def stitch(options):
             ctree = _stitch(c)
             c_rep_tree = ts.read_tree_newick(outmap_par["children"][c.label])
             c_rep_tree_labels = set(c_rep_tree.labels(internal=False))
-            try:
-                c_rep_tree_mrca = astral_tree_par.mrca(list(c_rep_tree_labels))
-            except:
-                breakpoint()
+            c_rep_tree_mrca = astral_tree_par.mrca(list(c_rep_tree_labels)) # there was a breakpoint here
             c_rep_tree_mrca_parent = c_rep_tree_mrca.parent
             for j in c_rep_tree_mrca.traverse_postorder(internal=False):
                 if j.label not in c_rep_tree_labels:
