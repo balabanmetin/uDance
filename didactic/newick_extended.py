@@ -37,7 +37,8 @@ def read_tree_newick(newick):
         while i < len(ts):
             # end of Newick string
             if ts[i] == ';':
-                if i != len(ts)-1 or n != t.root:
+                #if i != len(ts)-1 or n != t.root:
+                if i != len(ts)-1:
                     raise RuntimeError(INVALID_NEWICK)
 
             # go to new child

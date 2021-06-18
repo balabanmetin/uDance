@@ -22,7 +22,10 @@ class PoolAstralWorker:
         partition_output_dir = join(cls.options.output_fp, str(i))
         genes = glob(join(partition_output_dir, "*", ""))
         for gene in genes:
-            best = Path(join(gene, 'RUN.raxml.bestTree'))
+            if cls.options.use_iqtree:
+                best = Path(join(gene, 'RUN.treefile'))
+            else:
+                best = Path(join(gene, 'RUN.raxml.bestTree'))
             bestCollapsed = Path(join(gene, 'RUN.raxml.bestTreeCollapsed'))
             if bestCollapsed.is_file():
                 raxtree = bestCollapsed
@@ -32,7 +35,7 @@ class PoolAstralWorker:
                 stderr.write("%s/RUN.raxml.bestTree does not exist. RAxML job is corrupted. \n" % gene)
                 continue
             treestr = open(raxtree).readline()
-            dupmap_file = Path(join(gene,"dupmap.txt"))
+            dupmap_file = Path(join(gene, "dupmap.txt"))
             if dupmap_file.is_file():
                 dmp = list(map(lambda x: x.strip().split("\t"), open(dupmap_file).readlines()))
                 expanded_tree_str = expand_dedupe_newick(treestr, dmp)
@@ -40,7 +43,7 @@ class PoolAstralWorker:
                 expanded_tree_str = treestr
             with open(join(gene, "raxml.expanded.nwk"), "w") as out:
                 out.write(expanded_tree_str)
-        expanded_trees = glob(join(partition_output_dir, "*","raxml.expanded.nwk"))
+        expanded_trees = glob(join(partition_output_dir, "*", "raxml.expanded.nwk"))
         astral_input_file = join(partition_output_dir, "astral_input.trees")
 
         with open(astral_input_file, 'wb') as wfd:
@@ -52,9 +55,14 @@ class PoolAstralWorker:
         astral_log_file = join(partition_output_dir, "astral.log")
         astral_const_file = join(partition_output_dir, "astral_constraint.nwk")
 
-        s = ["java", "-jar", cls.astral_exec, "-i", astral_input_file,
-             "-o", astral_output_file, "-j", astral_const_file , "2>", astral_log_file]
-        return " ".join(s) + "\n"
+        s0 = f"sed -i 's/\//Z/g' {astral_input_file}\nsed -i 's/|/B/g' {astral_input_file}\n"
+        s1 = f"sed -i 's/\//Z/g' {astral_const_file}\nsed -i 's/|/B/g' {astral_const_file}\n"
+        s2 = ["java", "-jar", cls.astral_exec, "-i", astral_input_file,
+              "-o", astral_output_file, "-j", astral_const_file, "2>", astral_log_file]
+        s3 = f"sed -i 's/Z/\//g' {astral_input_file}\nsed -i 's/B/|/g' {astral_input_file}\n"
+        s3 = f"sed -i 's/Z/\//g' {astral_const_file}\nsed -i 's/B/|/g' {astral_const_file}\n"
+        s4 = f"sed -i 's/Z/\//g' {astral_output_file}\nsed -i 's/B/|/g' {astral_output_file}\n"
+        return s0 + s1 + " ".join(s2) + "\n" + s3 + s4
 
         # with open(astral_log_file, "w") as lg:
         #     with Popen(s, stdout=PIPE, stdin=PIPE, stderr=lg) as p:

@@ -149,8 +149,7 @@ def decompose(options):
     aggregate_placements(index_to_node_map, jp["placements"])
 
     # min_tree_coloring_sum(tstree, float(options.threshold))
-    min_tree_coloring_sum_max(tstree, float(options.threshold), 0.02)
-
+    min_tree_coloring_sum_max(tstree, float(options.threshold), options.edge_threshold)
     only_files = [f for f in listdir(options.alignment_dir_fp) if isfile(join(options.alignment_dir_fp, f))]
 
     num_genes = 0

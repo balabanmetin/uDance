@@ -5,6 +5,7 @@ from pathlib import Path
 import treeswift as ts
 import numpy as np
 from didactic.compute_bipartition_alignment import compute_bipartition_alignment
+from Bio import SeqIO
 
 
 class PoolAlignmentWorker:
@@ -92,34 +93,54 @@ class PoolAlignmentWorker:
                 fasttree_log = join(aln_outdir, "fasttree.log")
                 fasttree_err = join(aln_outdir, "fasttree.err")
                 fasttree_nwk = join(aln_outdir, "fasttree.nwk")
-                if isfile(bipartition_path) and cls.options.constrain_outgroups:
+                if isfile(bipartition_path) and cls.options.constrain_outgroups and not cls.options.use_iqtree:
                     f.write("FastTreeMP -constraints %s -log %s < %s > %s 2> %s \n"
                             % (bipartition_path, fasttree_log, aln_output_path, fasttree_nwk, fasttree_err))
-                else:
+                elif not cls.options.use_iqtree:
                     f.write("FastTreeMP -log %s < %s > %s 2> %s \n"
                             % (fasttree_log, aln_output_path, fasttree_nwk, fasttree_err))
 
                 fasttree_resolved_nwk = join(aln_outdir, "fasttree_resolved.nwk")
-                f.write("python3 -c \"import sys, treeswift; "
-                        "t=treeswift.read_tree_newick(input()); "
-                        "t.resolve_polytomies(); print(t)\" < %s > %s \n" % (fasttree_nwk, fasttree_resolved_nwk))
+                if not cls.options.use_iqtree:
+                    f.write("python3 -c \"import sys, treeswift; "
+                            "t=treeswift.read_tree_newick(input()); "
+                            "t.resolve_polytomies(); print(t)\" < %s > %s \n" % (fasttree_nwk, fasttree_resolved_nwk))
 
                 induced_raxml_constraint_path = join(aln_outdir, "raxml_constraint.nwk")
                 raxml_err = join(aln_outdir, "raxml.err")
                 raxml_out = join(aln_outdir, "raxml.out")
                 raxml_run = join(aln_outdir, "RUN")
+
+                iqtree_err = join(aln_outdir, "iqtree.err")
+                iqtree_out = join(aln_outdir, "iqtree.out")
+                iqtree_run = join(aln_outdir, "RUN")
                 if isfile(induced_raxml_constraint_path) and cls.options.constrain_outgroups:
                     f.write("raxml-ng --force perf_threads --tree %s --tree-constraint %s "
                             "--msa %s --model LG+G --prefix %s --seed 12345 "
                             "--threads 4 > %s 2> %s \n"
                             % (fasttree_resolved_nwk, induced_raxml_constraint_path, aln_output_path,
                                raxml_run, raxml_out, raxml_err))
+
                 else:
-                    f.write("raxml-ng --force perf_threads --tree %s "
-                            "--msa %s --model LG+G --prefix %s --seed 12345 "
-                            "--threads 4 > %s 2> %s \n"
-                            % (fasttree_resolved_nwk, aln_output_path,
-                               raxml_run, raxml_out, raxml_err))
+                    if cls.options.use_iqtree:
+                        if cls.options.protein_seqs:
+                            # f.write("iqtree -t %s -s %s --prefix %s "
+                            #         "--seed 12345 -T 4 --model LG+G > %s 2> %s \n"
+                            #         % (fasttree_resolved_nwk, aln_output_path,
+                            #            iqtree_run, iqtree_out, iqtree_err))
+                            f.write("iqtree2 -s %s --prefix %s --polytomy -blmin 1e-9 "
+                                    "--seed 12345 -T 4 --model LG+G > %s 2> %s \n"
+                                    % (aln_output_path, iqtree_run, iqtree_out, iqtree_err))
+                        else:
+                            f.write("iqtree2 -s %s --prefix %s --polytomy -blmin 1e-9 "
+                                    "--seed 12345 -T 4 --model GTR+F+G4 > %s 2> %s \n"
+                                    % (aln_output_path, iqtree_run, iqtree_out, iqtree_err))
+                    else:
+                        f.write("raxml-ng --force perf_threads --tree %s "
+                                "--msa %s --model LG+G --prefix %s --seed 12345 "
+                                "--threads 4 > %s 2> %s \n"
+                                % (fasttree_resolved_nwk, aln_output_path,
+                                   raxml_run, raxml_out, raxml_err))
             st = os.stat(script)
             os.chmod(script, st.st_mode | stat.S_IEXEC)
             return trimmed_aln_length*len(partition_aln), script

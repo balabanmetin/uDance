@@ -11,9 +11,19 @@ def stitch(options):
     cg_file = join(options.output_fp, "color_spanning_tree.nwk")
     cg = ts.read_tree_newick(cg_file)
 
+    if len(outmap["-1"]["children"]) == 1:
+        old_root = cg.root
+        new_root = old_root.child_nodes()[0]
+        cg.root = new_root
+        top = list(outmap["-1"]["children"].keys())[0]
+    else:
+        top = "-1"
+
     removed = set()
 
     def _stitch(node):
+        if node.label == '5':
+            breakpoint()
         if node.label == "-1":
             mytree = ts.Tree()
             mytree.is_rooted = True
@@ -25,8 +35,11 @@ def stitch(options):
         astral_tree_cons = ts.read_tree_newick(join(options.output_fp, node.label, "astral_constraint.nwk"))
         outmap_par = outmap[node.label]
 
-        uptree = ts.read_tree_newick(outmap_par["up"])
-        uptree_labels = set(uptree.labels(internal=False))
+        if node.label == top:
+            uptree_labels = set()
+        else:
+            uptree = ts.read_tree_newick(outmap_par["up"])
+            uptree_labels = set(uptree.labels(internal=False))
         astral_tree_cons_labels = set(astral_tree_cons.labels(internal=False))
         non_uptree = astral_tree_cons_labels.difference(uptree_labels)
 
@@ -35,11 +48,13 @@ def stitch(options):
             if i.label in non_uptree:
                 notuptree_species = i   # this has to be a backbone species
                 break
-        astral_tree_par.is_rooted = True
-        astral_tree_par.reroot(notuptree_species.parent)
-        astral_tree_par.suppress_unifurcations()
-        mrca = astral_tree_par.mrca(list(uptree_labels))
-        astral_tree_par.reroot(mrca)
+
+        if not node.label == top:
+            astral_tree_par.is_rooted = True
+            astral_tree_par.reroot(notuptree_species.parent)
+            astral_tree_par.suppress_unifurcations()
+            mrca = astral_tree_par.mrca(list(uptree_labels))
+            astral_tree_par.reroot(mrca)
         astral_tree_par.suppress_unifurcations()
         if outmap_par['ownsup']:
             deletelist = []
@@ -60,7 +75,8 @@ def stitch(options):
         else:
             non_uptree_mrca = astral_tree_par.mrca(list(non_uptree))
             to_be_deleted = astral_tree_par
-            non_uptree_mrca.parent.remove_child(non_uptree_mrca)
+            if node.label != top:
+                non_uptree_mrca.parent.remove_child(non_uptree_mrca)
             for j in to_be_deleted.traverse_postorder(internal=False):
                 if j.label not in uptree_labels:
                     removed.add(j.label + "\t" + node.label)
