@@ -22,8 +22,6 @@ def stitch(options):
     removed = set()
 
     def _stitch(node):
-        if node.label == '5':
-            breakpoint()
         if node.label == "-1":
             mytree = ts.Tree()
             mytree.is_rooted = True
