@@ -72,8 +72,9 @@ def min_tree_coloring_sum_max(tree, thr, max_thr):
             left, right = current.children
             if left.weight + right.weight + current.weight <= thr or \
                     left.edge_length + left.farthest + right.edge_length + right.farthest < max_thr or \
-                    left.edge_length <= ZERO_LEN or right.edge_length <= ZERO_LEN or \
-                    (not current.is_root() and current.edge_length <= ZERO_LEN):
+                    (left.edge_length <= ZERO_LEN and len(left.placements) > 0) or \
+                    (right.edge_length <= ZERO_LEN and len(right.placements) > 0) or \
+                    (not current.is_root() and current.edge_length <= ZERO_LEN and len(current.placements) > 0):
                 current.weight += left.weight + right.weight
                 current.farthest = max(left.edge_length + left.farthest, right.edge_length + right.farthest)
             elif left.weight + right.weight <= thr:
