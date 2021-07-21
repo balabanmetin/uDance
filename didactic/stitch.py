@@ -12,12 +12,10 @@ def stitch(options):
     cg = ts.read_tree_newick(cg_file)
 
     if len(outmap["-1"]["children"]) == 1:
-        old_root = cg.root
-        new_root = old_root.child_nodes()[0]
-        cg.root = new_root
-        top = list(outmap["-1"]["children"].keys())[0]
-    else:
-        top = "-1"
+        rm_root = cg.root
+        cg.reroot(cg.root.children[0])
+        rm_root.parent.remove_child(rm_root)
+        outmap.pop("-1")
 
     removed = set()
 
@@ -31,63 +29,80 @@ def stitch(options):
 
         astral_tree_par = ts.read_tree_newick(join(options.output_fp, node.label, "astral_output.nwk"))
         astral_tree_cons = ts.read_tree_newick(join(options.output_fp, node.label, "astral_constraint.nwk"))
+        astral_tree_cons_labels = set(astral_tree_cons.labels(internal=False))
+
         outmap_par = outmap[node.label]
 
-        if node.label == top:
-            uptree_labels = set()
-        else:
+        uptreestr = outmap_par["up"]
+        if uptreestr: # there is an uptree
             uptree = ts.read_tree_newick(outmap_par["up"])
+
             uptree_labels = set(uptree.labels(internal=False))
-        astral_tree_cons_labels = set(astral_tree_cons.labels(internal=False))
-        non_uptree = astral_tree_cons_labels.difference(uptree_labels)
+            non_uptree = astral_tree_cons_labels.difference(uptree_labels)
 
-        astral_tree_par.root.edge_length = None
-        for i in astral_tree_par.traverse_postorder(internal=False):
-            if i.label in non_uptree:
-                notuptree_species = i   # this has to be a backbone species
-                break
-
-        if not node.label == top:
+            astral_tree_par.root.edge_length = None
+            for i in astral_tree_par.traverse_postorder(internal=False):
+                if i.label in non_uptree:
+                    notuptree_species = i   # this has to be a backbone species
+                    break
             astral_tree_par.is_rooted = True
             astral_tree_par.reroot(notuptree_species.parent)
             astral_tree_par.suppress_unifurcations()
             mrca = astral_tree_par.mrca(list(uptree_labels))
             astral_tree_par.reroot(mrca)
-        astral_tree_par.suppress_unifurcations()
-        if outmap_par['ownsup']:
-            deletelist = []
-            for c in astral_tree_par.root.children:
-                for llab in c.traverse_postorder(internal=False):
-                    if llab.label in uptree_labels:
-                        deletelist += [c]
-                        break
+            astral_tree_par.suppress_unifurcations()
+            if outmap_par['ownsup']:
+                deletelist = []
+                for c in astral_tree_par.root.children:
+                    for llab in c.traverse_postorder(internal=False):
+                        if llab.label in uptree_labels:
+                            deletelist += [c]
+                            break
 
-            for i in deletelist:
-                for j in i.traverse_postorder(internal=False):
+                for i in deletelist:
+                    for j in i.traverse_postorder(internal=False):
+                        if j.label not in uptree_labels:
+                            removed.add(j.label + "\t" + node.label)
+                    astral_tree_par.root.remove_child(i)
+                if len(astral_tree_par.root.children) != 1:
+                    raise ValueError('Astral tree is not binary.')
+                astral_tree_par.root = astral_tree_par.root.children[0]  # get rid of the degree 2 node
+            else:
+                non_uptree_mrca = astral_tree_par.mrca(list(non_uptree))
+                to_be_deleted = astral_tree_par
+                non_uptree_mrca.parent.remove_child(non_uptree_mrca)
+                for j in to_be_deleted.traverse_postorder(internal=False):
                     if j.label not in uptree_labels:
                         removed.add(j.label + "\t" + node.label)
-                astral_tree_par.root.remove_child(i)
-            if len(astral_tree_par.root.children) != 1:
-                raise ValueError('Astral tree is not binary.')
-            astral_tree_par.root = astral_tree_par.root.children[0]  # get rid of the degree 2 node
-        else:
-            non_uptree_mrca = astral_tree_par.mrca(list(non_uptree))
-            to_be_deleted = astral_tree_par
-            if node.label != top:
-                non_uptree_mrca.parent.remove_child(non_uptree_mrca)
-            for j in to_be_deleted.traverse_postorder(internal=False):
-                if j.label not in uptree_labels:
-                    removed.add(j.label + "\t" + node.label)
-            astral_tree_par = ts.Tree()
+                astral_tree_par = ts.Tree()
+                astral_tree_par.is_rooted = True
+                astral_tree_par.root = non_uptree_mrca
+        else: # find a query. root at its MRCA. find mrca of one of the childs (representatives). root at there.
+            non_uptree = astral_tree_cons_labels
+            for i in astral_tree_par.traverse_postorder(internal=False):
+                if i.label not in astral_tree_cons_labels:
+                    notconstree_species = i   # this has to be a query species
+                    break
             astral_tree_par.is_rooted = True
-            astral_tree_par.root = non_uptree_mrca
+            astral_tree_par.reroot(notconstree_species.parent)
+            astral_tree_par.suppress_unifurcations()
+
+            first_c = node.children[0]
+            first_c_rep_tree = ts.read_tree_newick(outmap_par["children"][first_c.label])
+            first_c_rep_tree_labels = set(first_c_rep_tree.labels(internal=False))
+            first_c_rep_tree_mrca = astral_tree_par.mrca(list(first_c_rep_tree_labels))
+            astral_tree_par.reroot(first_c_rep_tree_mrca.parent)
+            astral_tree_par.suppress_unifurcations()
 
         for c in node.children:
             ownsup_child = outmap[c.label]["ownsup"]
             ctree = _stitch(c)
             c_rep_tree = ts.read_tree_newick(outmap_par["children"][c.label])
             c_rep_tree_labels = set(c_rep_tree.labels(internal=False))
-            c_rep_tree_mrca = astral_tree_par.mrca(list(c_rep_tree_labels))
+            try:
+                c_rep_tree_mrca = astral_tree_par.mrca(list(c_rep_tree_labels))
+            except:
+                breakpoint()
             c_rep_tree_mrca_parent = c_rep_tree_mrca.parent
             for j in c_rep_tree_mrca.traverse_postorder(internal=False):
                 if j.label not in c_rep_tree_labels:

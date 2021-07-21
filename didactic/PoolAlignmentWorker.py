@@ -1,11 +1,11 @@
 import os
 import stat
+import shutil
 from os.path import join, isfile, abspath, expanduser
 from pathlib import Path
 import treeswift as ts
 import numpy as np
 from didactic.compute_bipartition_alignment import compute_bipartition_alignment
-from Bio import SeqIO
 
 
 class PoolAlignmentWorker:
@@ -110,10 +110,13 @@ class PoolAlignmentWorker:
                 raxml_err = join(aln_outdir, "raxml.err")
                 raxml_out = join(aln_outdir, "raxml.out")
                 raxml_run = join(aln_outdir, "RUN")
+                raxml_constraint_path = join(partition_output_dir, "raxml_constraint.nwk")
+                astral_constraint_path = join(partition_output_dir, "astral_constraint.nwk")
 
                 iqtree_err = join(aln_outdir, "iqtree.err")
                 iqtree_out = join(aln_outdir, "iqtree.out")
                 iqtree_run = join(aln_outdir, "RUN")
+                iqtree_constraint_path = join(partition_output_dir, "iqtree_constraint.nwk")
                 if isfile(induced_raxml_constraint_path) and cls.options.constrain_outgroups:
                     f.write("raxml-ng --force perf_threads --tree %s --tree-constraint %s "
                             "--msa %s --model LG+G --prefix %s --seed 12345 "
@@ -123,18 +126,35 @@ class PoolAlignmentWorker:
 
                 else:
                     if cls.options.use_iqtree:
+                        shutil.copy(astral_constraint_path, iqtree_constraint_path)
                         if cls.options.protein_seqs:
                             # f.write("iqtree -t %s -s %s --prefix %s "
                             #         "--seed 12345 -T 4 --model LG+G > %s 2> %s \n"
                             #         % (fasttree_resolved_nwk, aln_output_path,
                             #            iqtree_run, iqtree_out, iqtree_err))
-                            f.write("iqtree2 -s %s --prefix %s --polytomy -blmin 1e-9 "
-                                    "--seed 12345 -T 4 --model LG+G > %s 2> %s \n"
-                                    % (aln_output_path, iqtree_run, iqtree_out, iqtree_err))
+                            if os.path.isfile(iqtree_constraint_path):
+                                f.write("iqtree2 -s %s --prefix %s "
+                                        "--seed 12345 -T AUTO --model LG+G -g %s > %s 2> %s \n"
+                                        % (aln_output_path, iqtree_run,
+                                           iqtree_constraint_path,
+                                           iqtree_out, iqtree_err))
+                            else:
+                                f.write("iqtree2 -s %s --prefix %s "
+                                        "--seed 12345 -T AUTO --model LG+G -g %s > %s 2> %s \n"
+                                        % (aln_output_path, iqtree_run,
+                                           iqtree_out, iqtree_err))
                         else:
-                            f.write("iqtree2 -s %s --prefix %s --polytomy -blmin 1e-9 "
-                                    "--seed 12345 -T 4 --model GTR+F+G4 > %s 2> %s \n"
-                                    % (aln_output_path, iqtree_run, iqtree_out, iqtree_err))
+                            if os.path.isfile(iqtree_constraint_path):
+                                f.write("iqtree2 -s %s --prefix %s "
+                                        "--seed 12345 -T AUTO --model GTR+F+G4 -g %s > %s 2> %s \n"
+                                        % (aln_output_path, iqtree_run,
+                                           iqtree_constraint_path,
+                                           iqtree_out, iqtree_err))
+                            else:
+                                f.write("iqtree2 -s %s --prefix %s "
+                                        "--seed 12345 -T AUTO --model GTR+F+G4 > %s 2> %s \n"
+                                        % (aln_output_path, iqtree_run,
+                                           iqtree_out, iqtree_err))
                     else:
                         f.write("raxml-ng --force perf_threads --tree %s "
                                 "--msa %s --model LG+G --prefix %s --seed 12345 "

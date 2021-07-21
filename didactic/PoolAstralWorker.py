@@ -54,15 +54,10 @@ class PoolAstralWorker:
         astral_output_file = join(partition_output_dir, "astral_output.nwk")
         astral_log_file = join(partition_output_dir, "astral.log")
         astral_const_file = join(partition_output_dir, "astral_constraint.nwk")
-
-        s0 = f"sed -i 's/\//Z/g' {astral_input_file}\nsed -i 's/|/B/g' {astral_input_file}\n"
-        s1 = f"sed -i 's/\//Z/g' {astral_const_file}\nsed -i 's/|/B/g' {astral_const_file}\n"
-        s2 = ["java", "-jar", cls.astral_exec, "-i", astral_input_file,
-              "-o", astral_output_file, "-j", astral_const_file, "2>", astral_log_file]
-        s3 = f"sed -i 's/Z/\//g' {astral_input_file}\nsed -i 's/B/|/g' {astral_input_file}\n"
-        s3 = f"sed -i 's/Z/\//g' {astral_const_file}\nsed -i 's/B/|/g' {astral_const_file}\n"
-        s4 = f"sed -i 's/Z/\//g' {astral_output_file}\nsed -i 's/B/|/g' {astral_output_file}\n"
-        return s0 + s1 + " ".join(s2) + "\n" + s3 + s4
+        s = f'cp {astral_input_file} {astral_output_file}\n'
+        # s = ["java", "-jar", cls.astral_exec, "-i", astral_input_file,
+        #       "-o", astral_output_file, "-j", astral_const_file, "2>", astral_log_file]
+        return s
 
         # with open(astral_log_file, "w") as lg:
         #     with Popen(s, stdout=PIPE, stdin=PIPE, stderr=lg) as p:
