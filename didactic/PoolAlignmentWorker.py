@@ -5,7 +5,6 @@ from pathlib import Path
 import treeswift as ts
 import numpy as np
 from didactic.compute_bipartition_alignment import compute_bipartition_alignment
-from Bio import SeqIO
 
 
 class PoolAlignmentWorker:

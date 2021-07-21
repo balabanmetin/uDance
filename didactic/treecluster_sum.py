@@ -1,5 +1,5 @@
 from collections import deque
-
+ZERO_LEN = 10**(-9)
 
 # initialize properties of input tree and return set containing taxa of leaves
 def prep(tree, support):
@@ -71,7 +71,9 @@ def min_tree_coloring_sum_max(tree, thr, max_thr):
         else:
             left, right = current.children
             if left.weight + right.weight + current.weight <= thr or \
-                    left.edge_length + left.farthest + right.edge_length + right.farthest < max_thr:
+                    left.edge_length + left.farthest + right.edge_length + right.farthest < max_thr or \
+                    left.edge_length <= ZERO_LEN or right.edge_length <= ZERO_LEN or \
+                    (not current.is_root() and current.edge_length <= ZERO_LEN):
                 current.weight += left.weight + right.weight
                 current.farthest = max(left.edge_length + left.farthest, right.edge_length + right.farthest)
             elif left.weight + right.weight <= thr:
