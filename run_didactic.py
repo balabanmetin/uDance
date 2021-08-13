@@ -1,6 +1,6 @@
 import multiprocessing as mp
 
-from didactic.options import *
+from uDance.options import *
 
 if __name__ == "__main__":
     mp.set_start_method('fork')

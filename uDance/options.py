@@ -3,9 +3,9 @@ import sys
 from multiprocessing import cpu_count
 from os.path import abspath, expanduser
 from sys import stderr
-from didactic.decompose import decompose
-from didactic.refine import refine
-from didactic.stitch import stitch
+from uDance.decompose import decompose
+from uDance.refine import refine
+from uDance.stitch import stitch
 
 
 def options_config():

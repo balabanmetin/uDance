@@ -3,7 +3,7 @@ from os.path import join
 
 import pkg_resources
 
-from didactic.PoolAstralWorker import PoolAstralWorker
+from uDance.PoolAstralWorker import PoolAstralWorker
 import multiprocessing as mp
 
 
@@ -13,7 +13,7 @@ def refine(options):
     with open(outmap) as o:
         j = json.load(o)
     partition_dirs = [x for x in j.keys() if int(x) >= 0]
-    astral_exec = pkg_resources.resource_filename('didactic', "tools/astral.jar")
+    astral_exec = pkg_resources.resource_filename('uDance', "tools/astral.jar")
     partition_worker = PoolAstralWorker()
     partition_worker.set_class_attributes(options, astral_exec)
     pool = mp.Pool(options.num_thread)

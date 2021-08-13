@@ -5,7 +5,7 @@ from sys import stderr
 import shutil
 from subprocess import Popen, PIPE
 
-from didactic.expand_dedupe_newick import expand_dedupe_newick
+from uDance.expand_dedupe_newick import expand_dedupe_newick
 
 
 class PoolAstralWorker:

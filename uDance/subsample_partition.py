@@ -2,7 +2,7 @@ from os.path import join
 from glob import glob
 import numpy as np
 from pathlib import Path
-from didactic.fasta2dic import readfq
+from uDance.fasta2dic import readfq
 from scipy.sparse.csgraph import connected_components
 import time
 import treeswift as ts

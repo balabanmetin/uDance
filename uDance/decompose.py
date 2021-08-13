@@ -3,15 +3,15 @@ import json
 import sys
 import multiprocessing as mp
 
-from didactic.PoolAlignmentWorker import PoolAlignmentWorker
-from didactic.fasta2dic import fasta2dic
-from didactic.newick_extended import read_tree_newick
+from uDance.PoolAlignmentWorker import PoolAlignmentWorker
+from uDance.fasta2dic import fasta2dic
+from uDance.newick_extended import read_tree_newick
 import treeswift as ts
 from pathlib import Path
 from os import listdir
 from os.path import isfile, join, splitext
-from didactic.treecluster_sum import min_tree_coloring_sum, min_tree_coloring_sum_max
-from didactic.PoolPartitionWorker import PoolPartitionWorker
+from uDance.treecluster_sum import min_tree_coloring_sum, min_tree_coloring_sum_max
+from uDance.PoolPartitionWorker import PoolPartitionWorker
 from random import Random
 import glob
 

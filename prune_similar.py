@@ -3,7 +3,7 @@ from multiprocessing import cpu_count
 from optparse import OptionParser
 from os.path import join
 
-from didactic.subsample_partition import subsample_partition
+from uDance.subsample_partition import subsample_partition
 
 
 if __name__ == '__main__':

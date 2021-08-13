@@ -5,7 +5,7 @@ from os.path import join, isfile, abspath, expanduser
 from pathlib import Path
 import treeswift as ts
 import numpy as np
-from didactic.compute_bipartition_alignment import compute_bipartition_alignment
+from uDance.compute_bipartition_alignment import compute_bipartition_alignment
 
 
 class PoolAlignmentWorker:

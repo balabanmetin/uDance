@@ -1,7 +1,7 @@
 from os.path import join
 from pathlib import Path
 
-from didactic.compute_bipartition_alignment import compute_bipartition_alignment
+from uDance.compute_bipartition_alignment import compute_bipartition_alignment
 
 
 class PoolPartitionWorker:
