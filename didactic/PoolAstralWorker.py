@@ -22,10 +22,12 @@ class PoolAstralWorker:
         partition_output_dir = join(cls.options.output_fp, str(i))
         genes = glob(join(partition_output_dir, "*", ""))
         for gene in genes:
-            if cls.options.use_iqtree:
+            if cls.options.method == 'iqtree':
                 best = Path(join(gene, 'RUN.treefile'))
-            else:
+            elif cls.options.method == 'raxml-ng':
                 best = Path(join(gene, 'RUN.raxml.bestTree'))
+            elif cls.options.method == 'raxml-8':
+                best = Path(join(gene, 'RAxML_bestTree.file'))
             bestCollapsed = Path(join(gene, 'RUN.raxml.bestTreeCollapsed'))
             if bestCollapsed.is_file():
                 raxtree = bestCollapsed

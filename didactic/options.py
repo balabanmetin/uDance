@@ -59,8 +59,8 @@ def options_config():
                                  "Must be a value between 0 and 1. highly occupant.")
     parser_decompose.add_argument("-e", "--edge-threshold", type=float, dest="edge_threshold", default=0.02,
                             help="maximun edge length in a cluster.")
-    parser_decompose.add_argument("-q", "--use-iqtree", dest="use_iqtree", action='store_true',
-                                  default=False, help="use iqtree for subtree inference.")
+    parser_decompose.add_argument("-m", "--method", dest="method", choices=['raxml-ng', 'iqtree', 'raxml-8'],
+                                  default=False, help="method for subtree inference.")
 
     parser_decompose.set_defaults(func=decompose)
 
@@ -73,8 +73,8 @@ def options_config():
     parser_ref.add_argument("-T", "--threads", type=int, dest="num_thread", default=0,
                             help="number of cores used in placement. "
                                  "0 to use all cores in the running machine", metavar="NUMBER")
-    parser_ref.add_argument("-q", "--use-iqtree", dest="use_iqtree", action='store_true',
-                            default=False, help="use iqtree for subtree inference.")
+    parser_ref.add_argument("-m", "--method", dest="method", choices=['raxml-ng', 'iqtree', 'raxml-8'],
+                                  default=False, help="method for subtree inference.")
 
     parser_ref.set_defaults(func=refine)
 

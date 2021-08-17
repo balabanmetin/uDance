@@ -93,15 +93,15 @@ class PoolAlignmentWorker:
                 fasttree_log = join(aln_outdir, "fasttree.log")
                 fasttree_err = join(aln_outdir, "fasttree.err")
                 fasttree_nwk = join(aln_outdir, "fasttree.nwk")
-                if isfile(bipartition_path) and cls.options.constrain_outgroups and not cls.options.use_iqtree:
+                if isfile(bipartition_path) and cls.options.constrain_outgroups and cls.options.method == 'raxml-ng':
                     f.write("FastTreeMP -constraints %s -log %s < %s > %s 2> %s \n"
                             % (bipartition_path, fasttree_log, aln_output_path, fasttree_nwk, fasttree_err))
-                elif not cls.options.use_iqtree:
+                elif cls.options.method == 'raxml-ng':
                     f.write("FastTreeMP -log %s < %s > %s 2> %s \n"
                             % (fasttree_log, aln_output_path, fasttree_nwk, fasttree_err))
 
                 fasttree_resolved_nwk = join(aln_outdir, "fasttree_resolved.nwk")
-                if not cls.options.use_iqtree:
+                if cls.options.method == 'raxml-ng':
                     f.write("python3 -c \"import sys, treeswift; "
                             "t=treeswift.read_tree_newick(input()); "
                             "t.resolve_polytomies(); print(t)\" < %s > %s \n" % (fasttree_nwk, fasttree_resolved_nwk))
@@ -117,6 +117,10 @@ class PoolAlignmentWorker:
                 iqtree_out = join(aln_outdir, "iqtree.out")
                 iqtree_run = join(aln_outdir, "RUN")
                 iqtree_constraint_path = join(partition_output_dir, "iqtree_constraint.nwk")
+                raxml8_constraint_path = join(partition_output_dir, "raxml8_constraint.nwk")
+                raxml8_run = "file"
+                raxml8_err = join(aln_outdir, "raxml8.err")
+                raxml8_out = join(aln_outdir, "raxml8.out")
                 if isfile(induced_raxml_constraint_path) and cls.options.constrain_outgroups:
                     f.write("raxml-ng --force perf_threads --tree %s --tree-constraint %s "
                             "--msa %s --model LG+G --prefix %s --seed 12345 "
@@ -125,14 +129,14 @@ class PoolAlignmentWorker:
                                raxml_run, raxml_out, raxml_err))
 
                 else:
-                    if cls.options.use_iqtree:
-                        shutil.copy(astral_constraint_path, iqtree_constraint_path)
+                    if cls.options.method == 'iqtree':
                         if cls.options.protein_seqs:
                             # f.write("iqtree -t %s -s %s --prefix %s "
                             #         "--seed 12345 -T 4 --model LG+G > %s 2> %s \n"
                             #         % (fasttree_resolved_nwk, aln_output_path,
                             #            iqtree_run, iqtree_out, iqtree_err))
-                            if os.path.isfile(iqtree_constraint_path):
+                            if os.path.isfile(astral_constraint_path):
+                                shutil.copy(astral_constraint_path, iqtree_constraint_path)
                                 f.write("iqtree2 -s %s --prefix %s "
                                         "--seed 12345 -T AUTO --model LG+G -g %s > %s 2> %s \n"
                                         % (aln_output_path, iqtree_run,
@@ -144,7 +148,8 @@ class PoolAlignmentWorker:
                                         % (aln_output_path, iqtree_run,
                                            iqtree_out, iqtree_err))
                         else:
-                            if os.path.isfile(iqtree_constraint_path):
+                            if os.path.isfile(astral_constraint_path):
+                                shutil.copy(astral_constraint_path, iqtree_constraint_path)
                                 f.write("iqtree2 -s %s --prefix %s "
                                         "--seed 12345 -T AUTO --model GTR+F+G4 -g %s > %s 2> %s \n"
                                         % (aln_output_path, iqtree_run,
@@ -155,12 +160,41 @@ class PoolAlignmentWorker:
                                         "--seed 12345 -T AUTO --model GTR+F+G4 > %s 2> %s \n"
                                         % (aln_output_path, iqtree_run,
                                            iqtree_out, iqtree_err))
-                    else:
+                    elif cls.options.method == 'raxml-ng':
                         f.write("raxml-ng --force perf_threads --tree %s "
                                 "--msa %s --model LG+G --prefix %s --seed 12345 "
                                 "--threads 4 > %s 2> %s \n"
                                 % (fasttree_resolved_nwk, aln_output_path,
                                    raxml_run, raxml_out, raxml_err))
+                    elif cls.options.method == 'raxml-8':
+                        if cls.options.protein_seqs:
+                            # f.write("iqtree -t %s -s %s --prefix %s "
+                            #         "--seed 12345 -T 4 --model LG+G > %s 2> %s \n"
+                            #         % (fasttree_resolved_nwk, aln_output_path,
+                            #            iqtree_run, iqtree_out, iqtree_err))
+                            if os.path.isfile(astral_constraint_path):
+                                shutil.copy(astral_constraint_path, raxml8_constraint_path)
+                                f.write("raxmlHPC-PTHREADS -s %s -w %s -n %s "
+                                        "-p 12345 -T %s -m LG+G -g %s > %s 2> %s \n"
+                                        % (aln_output_path, aln_outdir, raxml8_run, min(cls.options.num_thread, 8),
+                                           raxml8_constraint_path, raxml8_out, raxml8_err))
+                            else:
+                                f.write("raxmlHPC-PTHREADS -s %s -w %s -n %s "
+                                        "-p 12345 -T %s -m LG+G > %s 2> %s \n"
+                                        % (aln_output_path, aln_outdir, raxml8_run, min(cls.options.num_thread, 8),
+                                           raxml8_out, raxml8_err))
+                        else:
+                            if os.path.isfile(astral_constraint_path):
+                                shutil.copy(astral_constraint_path, raxml8_constraint_path)
+                                f.write("raxmlHPC-PTHREADS -s %s -w %s -n %s "
+                                        "-p 12345 -T %s -m GTRCAT -g %s > %s 2> %s \n"
+                                        % (aln_output_path, aln_outdir, raxml8_run, min(cls.options.num_thread, 8),
+                                           raxml8_constraint_path, raxml8_out, raxml8_err))
+                            else:
+                                f.write("raxmlHPC-PTHREADS -s %s -w %s -n %s "
+                                        "-p 12345 -T %s -m GTRCAT > %s 2> %s \n"
+                                        % (aln_output_path, aln_outdir, raxml8_run, min(cls.options.num_thread, 8),
+                                           raxml8_out, raxml8_err))
             st = os.stat(script)
             os.chmod(script, st.st_mode | stat.S_IEXEC)
             return trimmed_aln_length*len(partition_aln), script
