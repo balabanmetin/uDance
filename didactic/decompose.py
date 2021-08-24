@@ -366,11 +366,7 @@ def decompose(options):
     tasks = balance_jobs(all_scripts, options.num_tasks)
     for i, t in enumerate(tasks):
         main_script = open(join(options.output_fp, "main_raxml_script_%s.sh" % str(i)), "w")
-        s = ''
-        for i, item in enumerate(t):
-
-            s += f'taskset -c {(i*8)%(options.num_thread-7)}-{((i+1)*8)%(options.num_thread-7)-1} {item}\n'
-        main_script.write(s)
+        main_script.write("\n".join(t))
         main_script.write("\n")
         main_script.close()
 
