@@ -44,11 +44,12 @@ def stitch(options):
         outmap_par = outmap[node.label]
 
         uptreestr = outmap_par["up"]
+        non_uptree = astral_tree_cons_labels # default
         if uptreestr: # there is an uptree
             uptree = ts.read_tree_newick(outmap_par["up"])
 
             uptree_labels = set(uptree.labels(internal=False))
-            non_uptree = astral_tree_cons_labels.difference(uptree_labels)
+            non_uptree = astral_tree_cons_labels.difference(uptree_labels) # override
 
             astral_tree_par.root.edge_length = None
             for i in astral_tree_par.traverse_postorder(internal=False):
