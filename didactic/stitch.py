@@ -2,6 +2,30 @@ import json
 from os.path import join
 import treeswift as ts
 
+def deroot(tree):
+    if len(tree.root.children) > 2:
+        tree.is_rooted = False
+    elif len(tree.root.children) == 2:
+        left, right = tree.root.children
+        if left.is_leaf():
+            ln = left.edge_length + right.edge_length
+            tree.root.remove_child(left)
+            right.add_child(left)
+            left.edge_length = ln
+            tree.root = right
+            right.edge_length = None
+            tree.is_rooted = False
+        else:
+            ln = left.edge_length + right.edge_length
+            tree.root.remove_child(right)
+            left.add_child(right)
+            right.edge_length = ln
+            tree.root = left
+            left.edge_length = None
+            tree.is_rooted = False
+    return
+
+
 
 def safe_midpoint_reroot(tree, node):
     pendant_edge_length = node.edge_length
@@ -167,6 +191,7 @@ def stitch(options):
 
         return astral_tree_par
     stitched_tree = _stitch(cg.root)
+    deroot(stitched_tree)
     final_tree = join(options.output_fp, "didactic.nwk")
     stitched_tree.write_tree_newick(final_tree)
     unplaced = join(options.output_fp, "unplaced.csv")
