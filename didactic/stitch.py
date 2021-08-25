@@ -3,6 +3,16 @@ from os.path import join
 import treeswift as ts
 
 
+def safe_midpoint_reroot(tree, node):
+    pendant_edge_length = node.edge_length
+    node.edge_length = 1
+    tree.reroot(node, 0.5)
+    tree.suppress_unifurcations()
+    assert len(tree.root.children) == 2
+    for rc in tree.root.children:
+        rc.edge_length = pendant_edge_length / 2
+
+
 def stitch(options):
     outmap_file = join(options.output_fp, "outgroup_map.json")
     with open(outmap_file) as o:
@@ -77,22 +87,38 @@ def stitch(options):
                 astral_tree_par = ts.Tree()
                 astral_tree_par.is_rooted = True
                 astral_tree_par.root = non_uptree_mrca
-        else: # find a query. root at its MRCA. find mrca of one of the childs (representatives). root at there.
-            non_uptree = astral_tree_cons_labels
-            for i in astral_tree_par.traverse_postorder(internal=False):
-                if i.label not in astral_tree_cons_labels:
-                    notconstree_species = i   # this has to be a query species
-                    break
-            astral_tree_par.is_rooted = True
-            astral_tree_par.reroot(notconstree_species.parent)
-            astral_tree_par.suppress_unifurcations()
+        # if there's no uptree, find a backbone species and root at the middle of it's edge.
+        # if there is no backbone species either, there must be two children subsets.
+        # root at a representative of first child. find mrca of one of the other children. root at there.
+        else:
+            childreps = set()
+            for chd in node.children:
+                c_rep_tree = ts.read_tree_newick(outmap_par["children"][chd.label])
+                childreps |= set(c_rep_tree.labels(internal=False))
+            notreps = astral_tree_cons_labels.difference(childreps)
 
-            first_c = node.children[0]
-            first_c_rep_tree = ts.read_tree_newick(outmap_par["children"][first_c.label])
-            first_c_rep_tree_labels = set(first_c_rep_tree.labels(internal=False))
-            first_c_rep_tree_mrca = astral_tree_par.mrca(list(first_c_rep_tree_labels))
-            astral_tree_par.reroot(first_c_rep_tree_mrca.parent)
-            astral_tree_par.suppress_unifurcations()
+            constree_norep_species = None
+            for i in astral_tree_par.traverse_postorder(internal=False):
+                if i.label in astral_tree_cons_labels and i.label in notreps:
+                    constree_norep_species = i   # this has to be a backbone species that is not a children repres.
+                    break
+            if constree_norep_species:
+                safe_midpoint_reroot(astral_tree_par, constree_norep_species)
+            else: # no backbone exists. only representatives.
+                assert len(node.children) >= 2
+                first_c = node.children[0]
+                first_c_rep_tree = ts.read_tree_newick(outmap_par["children"][first_c.label])
+                first_c_rep_tree_labels = set(first_c_rep_tree.labels(internal=False))
+                for i in astral_tree_par.traverse_postorder(internal=False):
+                    if i.label in first_c_rep_tree_labels:
+                        first_c_rep_tree_rep = i  # this has to be a backbone species that is not a children repres.
+                        break
+                safe_midpoint_reroot(astral_tree_par, first_c_rep_tree_rep)
+                second_c = node.children[1]
+                second_c_rep_tree = ts.read_tree_newick(outmap_par["children"][second_c.label])
+                second_c_rep_tree_labels = set(second_c_rep_tree.labels(internal=False))
+                second_c_rep_tree_mrca = astral_tree_par.mrca(list(second_c_rep_tree_labels))
+                safe_midpoint_reroot(astral_tree_par, second_c_rep_tree_mrca)
 
         for c in node.children:
             ownsup_child = outmap[c.label]["ownsup"]
