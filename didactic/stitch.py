@@ -30,6 +30,7 @@ def deroot(tree):
 def safe_midpoint_reroot(tree, node):
     pendant_edge_length = node.edge_length
     node.edge_length = 1
+    tree.root.edge_length = None # this prevents a leaf with label "ROOT" from appearing after reroot
     tree.reroot(node, 0.5)
     tree.suppress_unifurcations()
     assert len(tree.root.children) == 2
