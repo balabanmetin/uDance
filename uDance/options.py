@@ -18,7 +18,7 @@ def options_config():
                                        description='decompose   Create local inference (RAxML) tasks\n'
                                                    'refine      Refine partitions via consensus (ASTRAL) \n'
                                                    'stitch      Stitch back locally refined trees',
-                                       help='Run run_didactic.py {commands} [-h] for additional help',
+                                       help='Run run_udance.py {commands} [-h] for additional help',
                                        dest='{commands}')
 
     # To make sure that subcommand is required in python >= 3.3
