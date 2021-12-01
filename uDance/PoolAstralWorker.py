@@ -18,8 +18,7 @@ class PoolAstralWorker:
         cls.astral_exec = astral_exec
 
     @classmethod
-    def worker(cls, i):
-        partition_output_dir = join(cls.options.output_fp, str(i))
+    def worker(cls, partition_output_dir):
         genes = glob(join(partition_output_dir, "*", ""))
         for gene in genes:
             if cls.options.method == 'iqtree':
@@ -56,12 +55,24 @@ class PoolAstralWorker:
         astral_output_file = join(partition_output_dir, "astral_output.nwk")
         astral_log_file = join(partition_output_dir, "astral.log")
         astral_const_file = join(partition_output_dir, "astral_constraint.nwk")
-        s = f'cp {astral_input_file} {astral_output_file}\n'
-        # s = ["java", "-jar", cls.astral_exec, "-i", astral_input_file,
-        #       "-o", astral_output_file, "-j", astral_const_file, "2>", astral_log_file]
-        return s
+        # if cls.options.use_gpu:
+        #     gpu_opt = ""
+        # else:
+        #     gpu_opt = "-C"
 
-        # with open(astral_log_file, "w") as lg:
-        #     with Popen(s, stdout=PIPE, stdin=PIPE, stderr=lg) as p:
-        #         astral_stdout = p.stdout.read().decode('utf-8')
-        #         #print(astral_stdout)
+        # s = f'cp {astral_const_file} {astral_output_file}\n'
+        # s = ["cp", astral_const_file, astral_output_file]
+        s = ["java", "-Xmx%sG" % cls.options.memory, "-jar", cls.astral_exec, "-i", astral_input_file,
+             "-o", astral_output_file, "-j", astral_const_file] # , "2>", astral_log_file]
+
+        # astral_jobs = join(options.output_fp, "run_astral.sh")
+        # with open(astral_jobs, "w") as f:
+        #     for ln in results:
+        #         f.write(ln)
+        #
+        # return s
+
+        with open(astral_log_file, "w") as lg:
+            with Popen(s, stdout=PIPE, stdin=PIPE, stderr=lg) as p:
+                astral_stdout = p.stdout.read().decode('utf-8')
+                print(astral_stdout)

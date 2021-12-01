@@ -1,0 +1,23 @@
+input_dir: "data2/alignments"
+output_dir: "data2/output"
+input_jplace: "data2/apples.jplace"
+cores: 4
+
+apples_config:
+  # [FM, OLS]
+  method: FM
+  # float. 0-infinity
+  filter: 0.25
+  # integer. 5-infinity
+  base: 25
+
+decompose_config:
+  # cluster must have a minimum diameter
+  edge_thr: 0.02
+  # approximate cluster size (no guarantees)
+  cluster_size: 100
+  # [raxml-ng,iqtree,raxml-8,copy]
+  infer: "raxml-8"
+  cores: 1
+
+

@@ -59,23 +59,28 @@ def options_config():
                                  "Must be a value between 0 and 1. highly occupant.")
     parser_decompose.add_argument("-e", "--edge-threshold", type=float, dest="edge_threshold", default=0.02,
                             help="maximun edge length in a cluster.")
-    parser_decompose.add_argument("-m", "--method", dest="method", choices=['raxml-ng', 'iqtree', 'raxml-8'],
-                                  default=False, help="method for subtree inference.")
+    parser_decompose.add_argument("-m", "--method", dest="method", choices=['raxml-ng', 'iqtree', 'raxml-8', 'copy'],
+                                  default='raxml-8', help="method for subtree inference.")
 
     parser_decompose.set_defaults(func=decompose)
 
     # refine command subparser
     parser_ref = subparsers.add_parser('refine',
                                        description='Refine partitions via consensus (ASTRAL)')
-    parser_ref.add_argument("-o", "--output", dest="output_fp",
-                            help="path for the output directory where files will be placed",
+    parser_ref.add_argument("-c", "--cluster", dest="cluster_dir",
+                            help="path for the directory of the partition to be refined. ",
                             metavar="DIRECTORY")
     parser_ref.add_argument("-T", "--threads", type=int, dest="num_thread", default=0,
-                            help="number of cores used in placement. "
+                            help="number of cores used in the refinement. "
+                                 "0 to use all cores in the running machine", metavar="NUMBER")
+    parser_ref.add_argument("-M", "--memory", type=int, dest="memory", default=1,
+                            help="memory used in the refinement. "
                                  "0 to use all cores in the running machine", metavar="NUMBER")
     parser_ref.add_argument("-m", "--method", dest="method", choices=['raxml-ng', 'iqtree', 'raxml-8'],
                                   default=False, help="method for subtree inference.")
-
+    parser_ref.add_argument("-g", "--use-gpu", dest="use_gpu", action='store_true',
+                            default=False,
+                            help="disable gpu usage (currently defuct)")
     parser_ref.set_defaults(func=refine)
 
     # stitch command subparser
@@ -94,6 +99,9 @@ def options_config():
 
     if options.num_thread == 0:
         options.num_thread = cpu_count()
-    options.output_fp = abspath(expanduser(options.output_fp))
+    if hasattr(options, "output_fp"):
+        options.output_fp = abspath(expanduser(options.output_fp))
+    if hasattr(options, "cluster_dir"):
+        options.cluster_dir = abspath(expanduser(options.cluster_dir))
 
     return options

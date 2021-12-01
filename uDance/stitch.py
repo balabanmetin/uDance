@@ -29,6 +29,9 @@ def deroot(tree):
 
 def safe_midpoint_reroot(tree, node):
     pendant_edge_length = node.edge_length
+    # can happen if the input trees are astral trees (terminal branches have no length)
+    if pendant_edge_length is None:
+        pendant_edge_length = 1
     node.edge_length = 1
     tree.root.edge_length = None # this prevents a leaf with label "ROOT" from appearing after reroot
     tree.reroot(node, 0.5)
@@ -190,7 +193,7 @@ def stitch(options):
         return astral_tree_par
     stitched_tree = _stitch(cg.root)
     deroot(stitched_tree)
-    final_tree = join(options.output_fp, "didactic.nwk")
+    final_tree = join(options.output_fp, "udance.nwk")
     stitched_tree.write_tree_newick(final_tree)
     unplaced = join(options.output_fp, "unplaced.csv")
     with open(unplaced, "w") as f:
