@@ -1,10 +1,13 @@
 
 import os
+
 configfile: "config.yaml"
 
 #include: "workflows/decompose.smk"
 
 outdir=config["output_dir"]
+
+localrules: all, clean
 
 rule all:
     input: t="%s/udance.nwk" % outdir
@@ -28,20 +31,6 @@ checkpoint decompose:
         """
             python run_udance.py decompose -s {input.ind} -o {params.outd} -f {params.size} -j {input.j} -m {params.method} -T {threads}
         """
-
-def aggregate_input(wildcards):
-    checkpoint_output = os.path.dirname(checkpoints.decompose.get(**wildcards).output[0])
-    wc = glob_wildcards(os.path.join(checkpoint_output, "{i}/{j}/run.sh"))
-    return ["%s/%s/%s/RAxML_bestTree.file" % (outdir, i, j) for i,j in zip(wc.i, wc.j)]
-
-
-# rule count:
-#     input: aggregate_input
-#     output: "data2/count.txt"
-#     shell:
-#         """
-#             echo {input} | tr " " "\n" > {output}
-#         """
 
 # phy inf
 rule genetreeinfer:
@@ -83,12 +72,3 @@ rule stitch:
            python run_udance.py stitch -o {params.o}
         """
 
-
-# def aggregate_genetrees(wildcards):
-#     checkpoint_output = checkpoints.decompose.get(**wildcards).output[0]
-#     wc = glob_wildcards(os.path.join(checkpoint_output, "{i}/{j}/run.sh"))
-#     return ["%s/%s/%s/RAxML_bestTree.file" % (outdir, i, j) for i,j in zip(wc.i, wc.j)]
-#
-# rule speciestreeinfer:
-#     input: "%s/{cluster}/{gene}/RAxML_bestTree.file" % outdir
-#     output:
