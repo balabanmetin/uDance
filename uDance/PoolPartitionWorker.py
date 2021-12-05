@@ -33,9 +33,12 @@ class PoolPartitionWorker:
             a_file.write("\n")
 
         # find all outgroups
-        outgroups = [n.label for n in j.traverse_postorder() if n.outgroup]
-        if len(outgroups) >= 4:
-            constraint = j.extract_tree_with(outgroups, suppress_unifurcations=True)
+        with open(join(cls.options.output_fp, "all_outgroups.txt")) as file:
+            lines = file.readlines()
+            outgroups_all = set([line.rstrip() for line in lines])
+        outgroups_in_partition = [n.label for n in j.traverse_postorder() if n.label in outgroups_all]
+        if len(outgroups_in_partition) >= 4:
+            constraint = j.extract_tree_with(outgroups_in_partition, suppress_unifurcations=True)
             constraint.is_rooted = False
             bipartition_path = join(partition_output_dir, "bipartition.fasta")
             with open(bipartition_path, "w") as f:

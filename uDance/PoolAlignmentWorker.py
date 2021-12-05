@@ -99,10 +99,10 @@ class PoolAlignmentWorker:
                     fasttree_err = join(aln_outdir, "fasttree.err")
                     fasttree_nwk = join(aln_outdir, "fasttree.nwk")
                     if isfile(bipartition_path) and cls.options.constrain_outgroups:
-                        f.write("FastTreeMP -constraints %s -log %s < %s > %s 2> %s \n"
+                        f.write("FastTreeMP -lg -gamma -constraints %s -log %s < %s > %s 2> %s \n"
                                 % (bipartition_path, fasttree_log, aln_output_path, fasttree_nwk, fasttree_err))
                     else:
-                        f.write("FastTreeMP -log %s < %s > %s 2> %s \n"
+                        f.write("FastTreeMP -lg -gamma -log %s < %s > %s 2> %s \n"
                                 % (fasttree_log, aln_output_path, fasttree_nwk, fasttree_err))
 
                     fasttree_resolved_nwk = join(aln_outdir, "fasttree_resolved.nwk")
@@ -118,13 +118,13 @@ class PoolAlignmentWorker:
                     if isfile(raxml_constraint_path) and cls.options.constrain_outgroups:
                         f.write("raxml-ng --tree %s --tree-constraint %s "
                                 "--msa %s --model LG+G --prefix %s --seed 12345 "
-                                "--threads 4 > %s 2> %s \n"
+                                "--threads 1 > %s 2> %s \n"
                                 % (fasttree_resolved_nwk, raxml_constraint_path, aln_output_path,
                                    raxml_run, raxml_out, raxml_err))
                     else:
                         f.write("raxml-ng --tree %s "
                                 "--msa %s --model LG+G --prefix %s --seed 12345 "
-                                "--threads 4 > %s 2> %s \n"
+                                "--threads 1 > %s 2> %s \n"
                                 % (fasttree_resolved_nwk, aln_output_path,
                                    raxml_run, raxml_out, raxml_err))
 

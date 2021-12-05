@@ -10,7 +10,7 @@ outdir=config["output_dir"]
 localrules: all, clean
 
 rule all:
-    input: t="%s/udance.nwk" % outdir
+    input: expand("%s/udance.{approach}.nwk" % outdir, approach=["incremental", "updates"])
 
 rule clean:
     params: outdir
@@ -50,7 +50,7 @@ def aggregate_refine_input(wildcards):
 
 rule refine:
     input: aggregate_refine_input
-    output: "%s/{cluster}/astral_output.nwk" % outdir
+    output: expand("%s/{{cluster}}/astral_output.{approach}.nwk" % outdir, approach=["incremental", "updates"])
     params: o=outdir, method=config["decompose_config"]["infer"]
     shell:
         """
@@ -60,12 +60,12 @@ rule refine:
 def aggregate_stitch_input(wildcards):
     checkpoint_output = os.path.dirname(checkpoints.decompose.get(**wildcards).output[0])
     wc = glob_wildcards(os.path.join(checkpoint_output, "{i}/species.txt"))
-    return ["%s/%s/astral_output.nwk" % (outdir, i) for i in wc.i]
+    return [f"%s/%s/astral_output.%s.nwk" % (outdir, i, j) for i in wc.i for j in ["incremental", "updates"]]
 
 
 rule stitch:
     input: aggregate_stitch_input
-    output: t="%s/udance.nwk" % outdir
+    output: expand("%s/udance.{approach}.nwk" % outdir, approach=["incremental", "updates"])
     params: o=outdir
     shell:
         """

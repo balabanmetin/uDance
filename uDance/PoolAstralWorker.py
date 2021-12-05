@@ -52,9 +52,22 @@ class PoolAstralWorker:
                 with open(f, 'rb') as fd:
                     shutil.copyfileobj(fd, wfd)
 
-        astral_output_file = join(partition_output_dir, "astral_output.nwk")
-        astral_log_file = join(partition_output_dir, "astral.log")
-        astral_const_file = join(partition_output_dir, "astral_constraint.nwk")
+        astral_output_file, astral_log_file, astral_const_file = [dict(), dict(), dict()]
+        astral_const_file["incremental"] = join(partition_output_dir, "astral_constraint.nwk")
+        astral_const_file["updates"] = join(partition_output_dir, "raxml_constraint.nwk")
+
+        for mtd in ["incremental", "updates"]:
+            astral_output_file[mtd] = join(partition_output_dir, "astral_output.%s.nwk" % mtd)
+            astral_log_file[mtd] = join(partition_output_dir, "astral.%s.log" % mtd)
+            s = ["java", "-Xmx%sG" % cls.options.memory, "-jar", cls.astral_exec, "-i", astral_input_file,
+                 "-o", astral_output_file[mtd]]
+            if Path(astral_const_file[mtd]).is_file():
+                s += ["-j", astral_const_file[mtd]]
+            with open(astral_log_file[mtd], "w") as lg:
+                with Popen(s, stdout=PIPE, stdin=PIPE, stderr=lg) as p:
+                    astral_stdout = p.stdout.read().decode('utf-8')
+                    #print(astral_stdout)
+
         # if cls.options.use_gpu:
         #     gpu_opt = ""
         # else:
@@ -62,17 +75,3 @@ class PoolAstralWorker:
 
         # s = f'cp {astral_const_file} {astral_output_file}\n'
         # s = ["cp", astral_const_file, astral_output_file]
-        s = ["java", "-Xmx%sG" % cls.options.memory, "-jar", cls.astral_exec, "-i", astral_input_file,
-             "-o", astral_output_file, "-j", astral_const_file] # , "2>", astral_log_file]
-
-        # astral_jobs = join(options.output_fp, "run_astral.sh")
-        # with open(astral_jobs, "w") as f:
-        #     for ln in results:
-        #         f.write(ln)
-        #
-        # return s
-
-        with open(astral_log_file, "w") as lg:
-            with Popen(s, stdout=PIPE, stdin=PIPE, stderr=lg) as p:
-                astral_stdout = p.stdout.read().decode('utf-8')
-                print(astral_stdout)
