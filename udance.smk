@@ -1,11 +1,14 @@
 
 import os
 
-configfile: "config.yaml"
+# configfile: "config.yaml"
 
 #include: "workflows/decompose.smk"
 
-outdir=config["output_dir"]
+wdr = config["workdir"]
+outdir = os.path.join(wdr, "output")
+alndir = os.path.join(wdr, "alignments")
+bbone = os.path.join(wdr, "backbone.nwk")
 
 localrules: all, clean
 
@@ -19,8 +22,23 @@ rule clean:
             rm -r {params} data2/count.txt
         """
 
+rule placement:
+    input: b = bbone, ind = alndir
+    output: j=os.path.join(outdir,"placement.jplace"), d=directory(os.path.join(outdir,"placement"))
+    params: o=outdir,
+            f=config["apples_config"]["filter"],
+            m=config["apples_config"]["method"], b=config["apples_config"]["base"]
+    log: out=os.path.join(outdir,"placement/apples2.out"), err=os.path.join(outdir,"placement/apples2.err")
+    shell:
+        """
+            bash uDance/create_concat_alignment.sh {input.ind} {input.b} {params.o}
+            run_apples.py -s {output.d}/backbone.fa -q {output.d}/query.fa \
+            -t {output.d}/backbone.tree -f {params.f} -m {params.m} -b {params.b} -o {output.j} > {log.out} 2> {log.err}
+        """
+
+
 checkpoint decompose:
-    input: j=config["input_jplace"], ind=config["input_dir"]
+    input: j=os.path.join(outdir,"placement.jplace"), ind=alndir
     output: cst=os.path.join(outdir,"color_spanning_tree.nwk")
     params:
         size=config["decompose_config"]["cluster_size"],

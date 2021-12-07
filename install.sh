@@ -4,7 +4,7 @@ if conda info --envs | grep "udance" > /dev/null; then
         echo "conda environment udance exists"
 else
         conda create -y -c bioconda -c conda-forge --channel smirarab --name udance python=3.8 \
-        pip newick_utils=1.6 setuptools seqkit==0.16.1 scipy dendropy==4.5.2 pandas==1.3.0 snakemake \
+        pip newick_utils=1.6 setuptools seqkit=2.1.0 scipy dendropy=4.5.2 pandas=1.3.0 snakemake \
         raxml=8.2.12 tqdist
         source activate udance
         conda activate udance

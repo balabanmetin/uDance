@@ -1,6 +1,5 @@
-input_dir: "data/alignments"
-output_dir: "data/output"
-input_jplace: "data/apples.jplace"
+workdir: "data"
+
 cores: 4
 
 apples_config:
