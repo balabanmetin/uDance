@@ -26,14 +26,14 @@ class PoolAstralWorker:
             elif cls.options.method == 'raxml-ng':
                 best = Path(join(gene, 'RUN.raxml.bestTree'))
             elif cls.options.method == 'raxml-8':
-                best = Path(join(gene, 'RAxML_bestTree.file'))
+                best = Path(join(gene, 'bestTree.nwk'))
             bestCollapsed = Path(join(gene, 'RUN.raxml.bestTreeCollapsed'))
             if bestCollapsed.is_file():
                 raxtree = bestCollapsed
             elif best.is_file():
                 raxtree = best
             else:
-                stderr.write("%s/RUN.raxml.bestTree does not exist. RAxML job is corrupted. \n" % gene)
+                stderr.write("%s/bestTree.nwk does not exist. RAxML job is corrupted. \n" % gene)
                 continue
             treestr = open(raxtree).readline()
             dupmap_file = Path(join(gene, "dupmap.txt"))
@@ -57,7 +57,10 @@ class PoolAstralWorker:
         astral_const_file["updates"] = join(partition_output_dir, "raxml_constraint.nwk")
 
         for mtd in ["incremental", "updates"]:
-            astral_output_file[mtd] = join(partition_output_dir, "astral_output.%s.nwk" % mtd)
+            astral_output_file[mtd] = Path(join(partition_output_dir, "astral_output.%s.nwk" % mtd))
+            if mtd == "updates" and not Path(astral_const_file["updates"]).is_file() and not Path(astral_const_file["incremental"]).is_file():
+                shutil.copyfile(astral_output_file["incremental"], astral_output_file["updates"])
+                break
             astral_log_file[mtd] = join(partition_output_dir, "astral.%s.log" % mtd)
             s = ["java", "-Xmx%sG" % cls.options.memory, "-jar", cls.astral_exec, "-i", astral_input_file,
                  "-o", astral_output_file[mtd]]
@@ -66,8 +69,7 @@ class PoolAstralWorker:
             with open(astral_log_file[mtd], "w") as lg:
                 with Popen(s, stdout=PIPE, stdin=PIPE, stderr=lg) as p:
                     astral_stdout = p.stdout.read().decode('utf-8')
-                    #print(astral_stdout)
-
+                    # print(astral_stdout)
         # if cls.options.use_gpu:
         #     gpu_opt = ""
         # else:

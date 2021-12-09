@@ -59,4 +59,4 @@ class PoolPartitionWorker:
                     for p in n.placements:
                         species_list += [p]
                         f.write(p + "\n")
-        return (i, species_list)
+        return species_list_path

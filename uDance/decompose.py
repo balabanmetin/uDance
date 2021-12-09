@@ -10,6 +10,8 @@ import treeswift as ts
 from pathlib import Path
 from os import listdir
 from os.path import isfile, join, splitext
+
+from uDance.prep_partition_alignments import prep_partition_alignments
 from uDance.treecluster_sum import min_tree_coloring_sum, min_tree_coloring_sum_max
 from uDance.PoolPartitionWorker import PoolPartitionWorker
 from random import Random
@@ -349,30 +351,15 @@ def decompose(options):
     partition_worker.set_class_attributes(options)
 
     pool = mp.Pool(options.num_thread)
-    species_dict = dict(pool.starmap(partition_worker.worker, tree_catalog.items()))
+    species_path_list = pool.starmap(partition_worker.worker, tree_catalog.items())
     pool.close()
     pool.join()
 
-    only_files = [f for f in listdir(options.alignment_dir_fp) if isfile(join(options.alignment_dir_fp, f))]
-
-    all_scripts = []
-    for aln in only_files:
-        aln_input_file = join(options.alignment_dir_fp, aln)
-        basename = splitext(aln)[0]
-        try:
-            fa_dict = fasta2dic(aln_input_file, options.protein_seqs, False)
-            alignment_worker = PoolAlignmentWorker()
-            alignment_worker.set_class_attributes(options, species_dict, fa_dict, basename)
-            pool = mp.Pool(options.num_thread)
-            scripts = pool.starmap(alignment_worker.worker, tree_catalog.items())
-            pool.close()
-            pool.join()
-            valid_scripts = [s for s in scripts if s is not None]
-            all_scripts += valid_scripts
-            # main_script.write("\n".join(valid_scripts))
-            # main_script.write("\n")
-        except e:
-            print("Alignment %s is not a valid fasta alignment" % aln_input_file, file=sys.stderr)
+    all_scripts = prep_partition_alignments(options.alignment_dir_fp,
+                                            options.protein_seqs,
+                                            species_path_list,
+                                            options.num_thread,
+                                            options.overlap_length)
 
     tasks = balance_jobs(all_scripts, options.num_tasks)
     for i, t in enumerate(tasks):
@@ -405,5 +392,3 @@ def decompose(options):
             except e:
                 pass
         print(i, count)
-
-    print("hello")

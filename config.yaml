@@ -1,6 +1,7 @@
-workdir: "data"
+workdir: "data4"
+# options are ["nuc", "prot"]
+chartype: "nuc"
 
-cores: 4
 
 apples_config:
   # [FM, OLS]
@@ -10,13 +11,20 @@ apples_config:
   # integer. 5-infinity
   base: 25
 
-decompose_config:
+prep_config:
   # cluster must have a minimum diameter
   edge_thr: 0.02
   # approximate cluster size (no guarantees)
-  cluster_size: 100
-  # [raxml-ng,iqtree,raxml-8,copy]
-  infer: "raxml-8"
-  cores: 1
+  cluster_size: 50
+  # cores used in preperation tasks such as decompose and prep_backbone_alignments
+  cores: 4
+  # minimum alignment overlap
+  overlap: 50
+
+infer_config:
+  # [raxml-ng,iqtree,raxml-8]
+  method: "raxml-8"
+  # number of starting trees
+  numstart: 2
 
 
