@@ -4,6 +4,9 @@ from pathlib import Path
 from sys import stderr
 import shutil
 from subprocess import Popen, PIPE
+import treeswift as ts
+from statistics import median
+from kmeans1d import cluster
 
 from uDance.expand_dedupe_newick import expand_dedupe_newick
 
@@ -20,6 +23,7 @@ class PoolAstralWorker:
     @classmethod
     def worker(cls, partition_output_dir):
         genes = glob(join(partition_output_dir, "*", ""))
+        median_map = dict()
         for gene in genes:
             if cls.options.method == 'iqtree':
                 best = Path(join(gene, 'RUN.treefile'))
@@ -35,7 +39,12 @@ class PoolAstralWorker:
             else:
                 stderr.write("%s/bestTree.nwk does not exist. RAxML job is corrupted. \n" % gene)
                 continue
-            treestr = open(raxtree).readline()
+            with open(raxtree) as f:
+                treestr = f.readline()
+            tf = ts.read_tree_newick(treestr)
+            lpps = [float(i.label) for i in tf.traverse_postorder(leaves=False) if i.label]
+            if len(lpps) > 0:
+                median_map[gene] = median(lpps)
             dupmap_file = Path(join(gene, "dupmap.txt"))
             if dupmap_file.is_file():
                 dmp = list(map(lambda x: x.strip().split("\t"), open(dupmap_file).readlines()))
@@ -44,7 +53,17 @@ class PoolAstralWorker:
                 expanded_tree_str = treestr
             with open(join(gene, "raxml.expanded.nwk"), "w") as out:
                 out.write(expanded_tree_str)
-        expanded_trees = glob(join(partition_output_dir, "*", "raxml.expanded.nwk"))
+        # remove outlier genes. outlier is defined as having lower median local posterior probability than majority
+        # we use 1d k-means (k=2) for outlier detection.
+        clusters, centroids = cluster(list(median_map.values()), k=2)
+        if 0.8 < sum(clusters)/len(clusters) < 1:
+            min_median = min([v for i, v in enumerate(median_map.values()) if clusters[i] == 0])
+            numdiscard = len(clusters) - sum(clusters)
+            print("In cluster %s, %d gene tree(s) with lower than "
+                  "%.2f median lpp are discarded." % (partition_output_dir, numdiscard, min_median), file=stderr)
+            expanded_trees = [join(gene, "raxml.expanded.nwk") for i, gene in enumerate(median_map.keys()) if clusters[i] == 1]
+        else:
+            expanded_trees = glob(join(partition_output_dir, "*", "raxml.expanded.nwk"))
         astral_input_file = join(partition_output_dir, "astral_input.trees")
 
         with open(astral_input_file, 'wb') as wfd:

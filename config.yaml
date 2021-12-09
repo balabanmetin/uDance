@@ -6,9 +6,9 @@ chartype: "nuc"
 apples_config:
   # [FM, OLS]
   method: FM
-  # float. 0-infinity
-  filter: 0.25
-  # integer. 5-infinity
+  # float. (0-infinity)
+  filter: 0.2
+  # integer. (5-infinity)
   base: 25
 
 prep_config:

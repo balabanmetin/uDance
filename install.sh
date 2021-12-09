@@ -8,5 +8,5 @@ else
         raxml=8.2.12 tqdist iqtree=2.1.2 treeshrink=1.3.9 fasttree=2.1.10
         source activate udance
         conda activate udance
-        pip install apples==2.0.5
+        pip install apples==2.0.5 kmeans1d==0.3.1
 fi
