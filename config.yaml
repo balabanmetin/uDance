@@ -1,4 +1,4 @@
-workdir: "data4"
+workdir: "datasmall"
 # options are ["nuc", "prot"]
 chartype: "nuc"
 
