@@ -10,6 +10,7 @@ from uDance.prep_partition_alignments import prep_partition_alignments
 wdr = config["workdir"]
 outdir = os.path.join(wdr, "output")
 alndir = os.path.join(wdr, "alignments")
+bbspec = os.path.join(wdr, "species.txt")
 bbone = os.path.join(outdir, "backbone.nwk")
 
 localrules: all, clean
@@ -24,9 +25,16 @@ rule clean:
             rm -r {params} data2/count.txt
         """
 
+rule copyspeciesfile:
+    input: s=bbspec
+    output: os.path.join(outdir, "backbone/0/species.txt")
+    shell:
+        """
+            cp {input} {output}
+        """
 checkpoint prepbackbonegenes:
-    input: s=os.path.join(outdir,"backbone/species.txt"), a=alndir
-    output: touch(os.path.join(outdir,"backbone/done.txt"))
+    input: s=os.path.join(outdir, "backbone/0/species.txt"), a=alndir
+    output: touch(os.path.join(outdir,"backbone/0/done.txt"))
     resources: cpus=config["prep_config"]["cores"]
     params: ov=config["prep_config"]["overlap"]
     run:
@@ -43,7 +51,7 @@ checkpoint prepbackbonegenes:
 def aggregate_refine_bb_input(wildcards):
     checkpoint_output = os.path.dirname(checkpoints.prepbackbonegenes.get(**wildcards).output[0])
     wc = glob_wildcards(os.path.join(checkpoint_output, "{j}/aln.fa"))
-    return ["%s/backbone/%s/bestTree.nwk" % (outdir,j) for j in wc.j]
+    return ["%s/backbone/0/%s/bestTree.nwk" % (outdir,j) for j in wc.j]
 
 
 rule refine_bb:
@@ -54,8 +62,8 @@ rule refine_bb:
         method=config["infer_config"]["method"]
     shell:
         '''
-            python run_udance.py refine -c {params.o}/backbone -m {params.method} -M 1
-            nw_reroot -d {params.o}/backbone/astral_output.incremental.nwk > {output}
+            python run_udance.py refine -c {params.o}/backbone/0 -m {params.method} -M 1
+            nw_reroot -d {params.o}/backbone/0/astral_output.incremental.nwk > {output}
         '''
 
 rule placement:
@@ -76,7 +84,7 @@ rule placement:
 
 checkpoint decompose:
     input: j=os.path.join(outdir,"placement.jplace"), ind=alndir
-    output: cst=os.path.join(outdir,"color_spanning_tree.nwk")
+    output: cst=os.path.join(outdir,"udance/color_spanning_tree.nwk")
     params:
         size=config["prep_config"]["cluster_size"],
         method=config["infer_config"]["method"],
@@ -85,15 +93,16 @@ checkpoint decompose:
     resources: cpus=config["prep_config"]["cores"]
     shell:
         """
-            python run_udance.py decompose -s {input.ind} -o {params.outd} -f {params.size} -j {input.j} -m {params.method} -T {resources.cpus} -l {params.ov}
+            cp {input.j} {params.outd}/udance
+            python run_udance.py decompose -s {input.ind} -o {params.outd}/udance -f {params.size} -j {input.j} -m {params.method} -T {resources.cpus} -l {params.ov}
         """
 
 # phy inf
 rule genetreeinfer:
     input:
-        "%s/{cluster}/{gene}/aln.fa" % outdir
+        "%s/{stage}/{cluster}/{gene}/aln.fa" % outdir
     output:
-        "%s/{cluster}/{gene}/bestTree.nwk" % outdir
+        "%s/{stage}/{cluster}/{gene}/bestTree.nwk" % outdir
     params:
         c=config["chartype"], s=config["infer_config"]["numstart"]
     shell:
@@ -105,22 +114,22 @@ rule genetreeinfer:
 def aggregate_refine_input(wildcards):
     checkpoint_output = os.path.dirname(checkpoints.decompose.get(**wildcards).output[0])
     wc = glob_wildcards(os.path.join(checkpoint_output, "%s/{j}/aln.fa" % wildcards.cluster))
-    return ["%s/%s/%s/bestTree.nwk" % (outdir, wildcards.cluster,j) for j in wc.j]
+    return ["%s/udance/%s/%s/bestTree.nwk" % (outdir, wildcards.cluster,j) for j in wc.j]
 
 
 rule refine:
     input: aggregate_refine_input
-    output: expand("%s/{{cluster}}/astral_output.{approach}.nwk" % outdir, approach=["incremental", "updates"])
+    output: expand("%s/udance/{{cluster}}/astral_output.{approach}.nwk" % outdir, approach=["incremental", "updates"])
     params: o=outdir, method=config["infer_config"]["method"]
     shell:
         """
-            python run_udance.py refine -c {params.o}/{wildcards.cluster} -m {params.method} -M 1
+            python run_udance.py refine -c {params.o}/udance/{wildcards.cluster} -m {params.method} -M 1
         """
 
 def aggregate_stitch_input(wildcards):
     checkpoint_output = os.path.dirname(checkpoints.decompose.get(**wildcards).output[0])
     wc = glob_wildcards(os.path.join(checkpoint_output, "{i}/species.txt"))
-    return [f"%s/%s/astral_output.%s.nwk" % (outdir, i, j) for i in wc.i for j in ["incremental", "updates"]]
+    return [f"%s/udance/%s/astral_output.%s.nwk" % (outdir, i, j) for i in wc.i for j in ["incremental", "updates"]]
 
 
 rule stitch:
@@ -129,6 +138,7 @@ rule stitch:
     params: o=outdir
     shell:
         """
-           python run_udance.py stitch -o {params.o}
+           python run_udance.py stitch -o {params.o}/udance
+           cp {outdir}/udance/udance.*.nwk {outdir}
         """
 

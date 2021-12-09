@@ -45,6 +45,9 @@ class PoolAstralWorker:
             lpps = [float(i.label) for i in tf.traverse_postorder(leaves=False) if i.label]
             if len(lpps) > 0:
                 median_map[gene] = median(lpps)
+            # contract after computing the median
+            tf.contract_low_support(threshold=0.9)
+            treestr = str(tf)+"\n"
             dupmap_file = Path(join(gene, "dupmap.txt"))
             if dupmap_file.is_file():
                 dmp = list(map(lambda x: x.strip().split("\t"), open(dupmap_file).readlines()))
