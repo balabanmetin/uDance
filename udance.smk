@@ -12,6 +12,11 @@ outdir = os.path.join(wdr, "output")
 alndir = os.path.join(wdr, "alignments")
 bbspec = os.path.join(wdr, "species.txt")
 bbone = os.path.join(outdir, "backbone.nwk")
+trimalndir = os.path.join(outdir, "trimmed")
+
+
+TRIMMEDGENES = [os.path.join(outdir, "trimdump", f) for f in os.listdir(alndir) if
+                  os.path.isfile(os.path.join(alndir, f))]
 
 localrules: all, clean
 
@@ -25,6 +30,43 @@ rule clean:
             rm -r {params} data2/count.txt
         """
 
+rule trimtaper:
+    input: "%s/{gene}" % alndir
+    output: "%s/trimdump/{gene}" % outdir
+    params: thr=config["trim_config"]["percent_nongap"]
+    shell:
+        """
+            TFA=`mktemp -t XXXXXX.fa`
+            trimal -in {input} -out $TFA -gt {params.thr} 
+            julia uDance/correction_multi.jl $TFA > {output}
+            rm $TFA
+        """
+
+rule trimcollect:
+    input: TRIMMEDGENES
+    output: directory(os.path.join(outdir, "trimmed"))
+    params: o=outdir
+    shell:
+        """
+            mv {params.o}/trimdump {output}
+        """
+
+rule mainlines:
+    input: trimalndir
+    output: bbspec
+    params:
+            n=config["mainlines_config"]["n"],
+            l=config["mainlines_config"]["length"],
+            char=config["chartype"]
+    shell:
+        """
+            if [ "{params.char}" == "nuc" ]; then
+                python run_udance.py mainlines -s {input} -n {params.n} -l {params.l} > {output}
+            else
+                python run_udance.py mainlines -s {input} -n {params.n} -l {params.l} -p > {output}
+            fi
+        """
+
 rule copyspeciesfile:
     input: s=bbspec
     output: os.path.join(outdir, "backbone/0/species.txt")
@@ -33,7 +75,7 @@ rule copyspeciesfile:
             cp {input} {output}
         """
 checkpoint prepbackbonegenes:
-    input: s=os.path.join(outdir, "backbone/0/species.txt"), a=alndir
+    input: s=os.path.join(outdir, "backbone/0/species.txt"), a=trimalndir
     output: touch(os.path.join(outdir,"backbone/0/done.txt"))
     resources: cpus=config["prep_config"]["cores"]
     params: ov=config["prep_config"]["overlap"]
@@ -59,31 +101,39 @@ rule refine_bb:
     output: bbone
     params:
         o=outdir,
-        method=config["infer_config"]["method"]
+        method=config["infer_config"]["method"],
+        c=config["refine_config"]["contract"]
     shell:
         '''
-            python run_udance.py refine -c {params.o}/backbone/0 -m {params.method} -M 1
+            python run_udance.py refine -p {params.o}/backbone/0 -m {params.method} -M 1 -c {params.c}
             nw_reroot -d {params.o}/backbone/0/astral_output.incremental.nwk > {output}
         '''
 
 rule placement:
-    input: b = bbone, ind = alndir
+    input: b = bbone, ind = trimalndir
     output: j=os.path.join(outdir,"placement.jplace"), d=directory(os.path.join(outdir,"placement"))
     params: o=outdir,
             f=config["apples_config"]["filter"],
-            m=config["apples_config"]["method"], b=config["apples_config"]["base"]
+            m=config["apples_config"]["method"],
+            b=config["apples_config"]["base"],
+            char=config["chartype"]
     resources: cpus=config["prep_config"]["cores"]
     log: out=os.path.join(outdir,"placement/apples2.out"), err=os.path.join(outdir,"placement/apples2.err")
     shell:
         """
             bash uDance/create_concat_alignment.sh {input.ind} {input.b} {params.o}
-            run_apples.py -s {output.d}/backbone.fa -q {output.d}/query.fa -T {resources.cpus} \
-            -t {output.d}/backbone.tree -f {params.f} -m {params.m} -b {params.b} -o {output.j} > {log.out} 2> {log.err}
+            if [ "{params.char}" == "nuc" ]; then
+                run_apples.py -s {output.d}/backbone.fa -q {output.d}/query.fa -T {resources.cpus} \
+                -t {output.d}/backbone.tree -f {params.f} -m {params.m} -b {params.b} -o {output.j} > {log.out} 2> {log.err}
+            else
+                run_apples.py -p -s {output.d}/backbone.fa -q {output.d}/query.fa -T {resources.cpus} \
+                -t {output.d}/backbone.tree -f {params.f} -m {params.m} -b {params.b} -o {output.j} > {log.out} 2> {log.err}
+            fi
         """
 
 
 checkpoint decompose:
-    input: j=os.path.join(outdir,"placement.jplace"), ind=alndir
+    input: j=os.path.join(outdir,"placement.jplace"), ind=trimalndir
     output: cst=os.path.join(outdir,"udance/color_spanning_tree.nwk")
     params:
         size=config["prep_config"]["cluster_size"],
@@ -120,10 +170,12 @@ def aggregate_refine_input(wildcards):
 rule refine:
     input: aggregate_refine_input
     output: expand("%s/udance/{{cluster}}/astral_output.{approach}.nwk" % outdir, approach=["incremental", "updates"])
-    params: o=outdir, method=config["infer_config"]["method"]
+    params: o=outdir,
+            method=config["infer_config"]["method"],
+            c=config["refine_config"]["contract"]
     shell:
         """
-            python run_udance.py refine -c {params.o}/udance/{wildcards.cluster} -m {params.method} -M 1
+            python run_udance.py refine -p {params.o}/udance/{wildcards.cluster} -m {params.method} -M 1 -c {params.c}
         """
 
 def aggregate_stitch_input(wildcards):

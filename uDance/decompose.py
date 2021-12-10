@@ -152,7 +152,7 @@ def decompose(options):
 
     # min_tree_coloring_sum(tstree, float(options.threshold))
     min_tree_coloring_sum_max(tstree, float(options.threshold), options.edge_threshold)
-    only_files = [f for f in listdir(options.alignment_dir_fp) if isfile(join(options.alignment_dir_fp, f))]
+    only_files = [f for f in listdir(options.alignment_dir_fp) if isfile(join(options.alignment_dir_fp, f)) and not f.startswith(".")]
 
     num_genes = 0
     occupancy = {}

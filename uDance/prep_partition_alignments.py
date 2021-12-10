@@ -1,4 +1,3 @@
-import sys
 import multiprocessing as mp
 
 from uDance.PoolAlignmentWorker import PoolAlignmentWorker
@@ -9,7 +8,7 @@ from os.path import isfile, join, splitext
 
 
 def prep_partition_alignments(alndir, protein_flag, species_path_list, num_thread, overlap):
-    only_files = [f for f in listdir(alndir) if isfile(join(alndir, f))]
+    only_files = [f for f in listdir(alndir) if isfile(join(alndir, f)) and not f.startswith(".")]
     all_scripts = []
     for aln in only_files:
         aln_input_file = join(alndir, aln)

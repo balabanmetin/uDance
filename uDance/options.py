@@ -6,6 +6,7 @@ from sys import stderr
 from uDance.decompose import decompose
 from uDance.refine import refine
 from uDance.stitch import stitch
+from uDance.mainlines import mainlines
 
 
 def options_config():
@@ -15,7 +16,8 @@ def options_config():
     parser.add_argument('-v', '--version', action='store_true', help='print the current version')
     # parser.add_argument('--debug', action='store_true', help='Print the traceback when an exception is raised')
     subparsers = parser.add_subparsers(title='commands',
-                                       description='decompose   Create local inference (RAxML) tasks\n'
+                                       description='mainlines   Strategically choose backbone taxa\n'
+                                                   'decompose   Create local inference (RAxML) tasks\n'
                                                    'refine      Refine partitions via consensus (ASTRAL) \n'
                                                    'stitch      Stitch back locally refined trees',
                                        help='Run run_udance.py {commands} [-h] for additional help',
@@ -26,39 +28,59 @@ def options_config():
     if (python_version[0] * 10 + python_version[1]) >= 33:
         subparsers.required = True
 
+    # mainlines command subparser
+    parser_mainlines = subparsers.add_parser('mainlines',
+                                             description='Strategically choose backbone taxa')
+    parser_mainlines.add_argument("-s", "--alignment-dir", dest="alignment_dir_fp",
+                                  help="path for input directory which contains "
+                                       "extended reference alignment files (FASTA), "
+                                       "containing reference and query sequences.",
+                                  metavar="FILE")
+    parser_mainlines.add_argument("-n", "--number", type=int, dest="target_num", metavar='NUMBER', default=1000,
+                                  help="number of taxa to be selected.")
+    parser_mainlines.add_argument("-p", "--protein", dest="protein_seqs", action='store_true', default=False,
+                                  help="input sequences are protein sequences")
+    parser_mainlines.add_argument("-l", "--length", type=int, dest="concat_length", default=5000,
+                                  help="number of sites in the concatenated alignment created. "
+                                       "This value is proportional with running time and memory use.", metavar="NUMBER")
+    parser_mainlines.add_argument("-g", "--gap-threshold", type=float, dest="gap_threshold", default=0.95,
+                                  help="Alignment filtering threshold. "
+                                       "Sites with a gappiness value larger than 1-gap_threshold will be removed.")
+    parser_mainlines.set_defaults(func=mainlines)
+
     # decompose command subparser
     parser_decompose = subparsers.add_parser('decompose',
-                                       description='Create local refinement tasks')
+                                             description='Create local refinement tasks')
     parser_decompose.add_argument("-j", "--jplace", dest="jplace_fp",
-                            help="path to the jplace placement file", metavar="FILE")
+                                  help="path to the jplace placement file", metavar="FILE")
     parser_decompose.add_argument("-f", "--threshold", dest="threshold", default="600",
-                            help="maximum number of elements in each cluster")
+                                  help="maximum number of elements in each cluster")
     parser_decompose.add_argument("-o", "--output", dest="output_fp",
-                            help="path for the output directory where files will be placed",
-                            metavar="DIRECTORY")
+                                  help="path for the output directory where files will be placed",
+                                  metavar="DIRECTORY")
     parser_decompose.add_argument("-s", "--alignment-dir", dest="alignment_dir_fp",
-                            help="path for input directory which contains "
-                                 "extended reference alignment files (FASTA), "
-                                 "containing reference and query sequences.",
-                            metavar="FILE")
+                                  help="path for input directory which contains "
+                                       "extended reference alignment files (FASTA), "
+                                       "containing reference and query sequences.",
+                                  metavar="FILE")
     parser_decompose.add_argument("-p", "--protein", dest="protein_seqs", action='store_true', default=False,
-                            help="input sequences are protein sequences")
+                                  help="input sequences are protein sequences")
     parser_decompose.add_argument("-T", "--threads", type=int, dest="num_thread", default=0,
-                            help="number of cores used in placement. "
-                                 "0 to use all cores in the running machine", metavar="NUMBER")
+                                  help="number of cores used in placement. "
+                                       "0 to use all cores in the running machine", metavar="NUMBER")
     parser_decompose.add_argument("-l", "--overlap", type=int, dest="overlap_length", default=50,
-                            help="minimum alignment overlap length needed to use the subalignment"
-                                 "in subtree refinement", metavar="NUMBER")
+                                  help="minimum alignment overlap length needed to use the subalignment"
+                                       "in subtree refinement", metavar="NUMBER")
     parser_decompose.add_argument("-c", "--constrain-outgroups", dest="constrain_outgroups", action='store_true',
-                            default=False,
-                            help="enforce outgroup topology on gene tree estimation stage.")
+                                  default=False,
+                                  help="enforce outgroup topology on gene tree estimation stage.")
     parser_decompose.add_argument("-n", "--numtasks", type=int, dest="num_tasks", metavar='NUMBER', default=1,
-                            help="number of tasks where local refinement jobs will be split.")
+                                  help="number of tasks where local refinement jobs will be split.")
     parser_decompose.add_argument("-C", "--occupancy", type=float, dest="occupancy_threshold", default=0.66,
-                            help="minimum fraction of species needed to call a gene. "
-                                 "Must be a value between 0 and 1. highly occupant.")
+                                  help="minimum fraction of species needed to call a gene. "
+                                       "Must be a value between 0 and 1. highly occupant.")
     parser_decompose.add_argument("-e", "--edge-threshold", type=float, dest="edge_threshold", default=0.02,
-                            help="maximun edge length in a cluster.")
+                                  help="maximun edge length in a cluster.")
     parser_decompose.add_argument("-m", "--method", dest="method", choices=['raxml-ng', 'iqtree', 'raxml-8', 'copy'],
                                   default='raxml-8', help="method for subtree inference.")
 
@@ -67,7 +89,7 @@ def options_config():
     # refine command subparser
     parser_ref = subparsers.add_parser('refine',
                                        description='Refine partitions via consensus (ASTRAL)')
-    parser_ref.add_argument("-c", "--cluster", dest="cluster_dir",
+    parser_ref.add_argument("-p", "--partition", dest="partition_dir",
                             help="path for the directory of the partition to be refined. ",
                             metavar="DIRECTORY")
     parser_ref.add_argument("-T", "--threads", type=int, dest="num_thread", default=0,
@@ -77,10 +99,13 @@ def options_config():
                             help="memory used in the refinement. "
                                  "0 to use all cores in the running machine", metavar="NUMBER")
     parser_ref.add_argument("-m", "--method", dest="method", choices=['raxml-ng', 'iqtree', 'raxml-8'],
-                                  default=False, help="method for subtree inference.")
+                            default=False, help="method for subtree inference.")
     parser_ref.add_argument("-g", "--use-gpu", dest="use_gpu", action='store_true',
                             default=False,
                             help="disable gpu usage (currently defuct)")
+    parser_ref.add_argument("-c", "--contract", type=float, dest="contract_threshold", default=0.9,
+                            help="contract branches with support less than given threshold"
+                                 "in the inferred gene trees", metavar="NUMBER")
     parser_ref.set_defaults(func=refine)
 
     # stitch command subparser
@@ -97,7 +122,7 @@ def options_config():
 
     options = parser.parse_args()
 
-    if options.num_thread == 0:
+    if hasattr(options, "num_thread") and options.num_thread == 0:
         options.num_thread = cpu_count()
     if hasattr(options, "output_fp"):
         options.output_fp = abspath(expanduser(options.output_fp))

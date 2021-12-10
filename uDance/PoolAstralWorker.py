@@ -46,7 +46,7 @@ class PoolAstralWorker:
             if len(lpps) > 0:
                 median_map[gene] = median(lpps)
             # contract after computing the median
-            tf.contract_low_support(threshold=0.9)
+            tf.contract_low_support(threshold=cls.options.contract_threshold)
             treestr = str(tf)+"\n"
             dupmap_file = Path(join(gene, "dupmap.txt"))
             if dupmap_file.is_file():
@@ -59,8 +59,8 @@ class PoolAstralWorker:
         # remove outlier genes. outlier is defined as having lower median local posterior probability than majority
         # we use 1d k-means (k=2) for outlier detection.
         clusters, centroids = cluster(list(median_map.values()), k=2)
-        if 0.8 < sum(clusters)/len(clusters) < 1:
-            min_median = min([v for i, v in enumerate(median_map.values()) if clusters[i] == 0])
+        if 0.8 < sum(clusters)/len(clusters) < 1 and centroids[1] - centroids[0] > 0.1:
+            min_median = min([v for i, v in enumerate(median_map.values()) if clusters[i] == 1])
             numdiscard = len(clusters) - sum(clusters)
             print("In cluster %s, %d gene tree(s) with lower than "
                   "%.2f median lpp are discarded." % (partition_output_dir, numdiscard, min_median), file=stderr)

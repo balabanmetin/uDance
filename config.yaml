@@ -2,6 +2,15 @@ workdir: "datasmall"
 # options are ["nuc", "prot"]
 chartype: "nuc"
 
+trim_config:
+  # sites with less non-gap fraction than below will be removed
+  percent_nongap: 0.05
+
+mainlines_config:
+  # target number of taxa
+  n: 100
+  # concatenation alignment length
+  length: 5000
 
 apples_config:
   # [FM, OLS]
@@ -27,4 +36,7 @@ infer_config:
   # number of starting trees
   numstart: 2
 
+refine_config:
+  # contract low support branches threshold. 0.9 for iqtree -abayes
+  contract: 0.9
 
