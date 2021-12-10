@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+
+export SCRIPTS_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+
 # create a conda environment including the tools benchmarked.
 if conda info --envs | grep "udance" > /dev/null; then
         echo "conda environment udance exists"
@@ -9,4 +12,7 @@ else
         source activate udance
         conda activate udance
         pip install apples==2.0.5 kmeans1d==0.3.1
+
+        # julia needs to download packages during the first run. Let's do it now while we are online :)
+        julia $SCRIPTS_DIR/uDance/correction_multi.jl datasmall/alignments/p0309.fasta > /dev/null
 fi
