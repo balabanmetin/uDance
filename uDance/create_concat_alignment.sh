@@ -16,7 +16,7 @@ touch $TMPDIR/alnpaths.txt
 ls $ALNDIR | while read aln; do
     # awk instead of wc -L because OSX doesn't have wc -L
     sze=`sed -e "s/>\(.*\)/@>\1@/g" $ALNDIR/$aln|tr -d "\n"|tr "@" "\n"|tail -n+2 | head -n 2 | tail -n 1 | awk '{print length}'`
-    grep ">" $ALNDIR/$aln | sed "s/>//g" > $TMPDIR/thistaxa.txt
+    grep ">" $ALNDIR/$aln | sed "s/>//g" | sort -u > $TMPDIR/thistaxa.txt
     comm -23 $TMPDIR/alltaxa.txt $TMPDIR/thistaxa.txt > $TMPDIR/missing.txt
     (cat $ALNDIR/$aln; while read tx; do printf ">$tx\n"; dd if=/dev/zero bs=$sze count=1 2>/dev/null | tr '\0' "-" | tr '\0' '-'; printf "\n"; done < $TMPDIR/missing.txt) | gzip -c - > $TMPDIR/$aln.gz
     echo $TMPDIR/$aln.gz >> $TMPDIR/alnpaths.txt

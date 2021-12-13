@@ -1,0 +1,59 @@
+
+The MicrobesOnline tree comparison tools are written in Perl and
+should run on any platform. They rely on the MOTree.pm module
+(included), so please make sure that MOTree.pm is in the current
+directory or is on your Perl include-path, or use the -I option to
+perl, e.g.
+
+   perl -I directory_containing_MOTree CompareToBootstrap.pl arguments...
+
+Usage:
+
+CompareToBootstrap.pl -tree main_tree -boot bootstrapped_trees > new_tree
+or
+CompareToBootstrap main_tree bootstrapped_trees > new_tree
+
+CompareTree.pl -tree tree1 -versus tree2 > comparison_table
+
+All input files must be in Newick format.
+
+CompareToBootstrap.pl will compare the main tree to the bootstrapped
+trees. The bootstrapped tree file should contain multiple trees
+separated by newlines and ending with a semicolon (";"), as is
+standard for Newick format. (Each tree may be split across multiple
+lines.) CompareToBootstrap.pl will print out a tree with the same
+topology and branch lengths as the main tree and with bootstrap values
+as the names for the internal nodes. The bootstrap values are
+fractions, not counts.  In other words, they range from 0 to 1, not
+from 0 to number of bootstraps.
+
+CompareTree.pl will compare two trees that describe the same set of
+leaves. It reports to standard error a line on how similar the trees
+are. Frac is the fraction of splits in the first tree that are found
+in the second tree, MaxLnDf is the maximum difference in branch
+lengths, and MaxBtDf is the maximum difference in bootstrap values.
+
+CompareTree.pl also prints out a tab-delimited table with one line per
+internal node in the first tree. You will probably want to save this
+to a file. Each line reports the branch length to its ancestor, its
+bootstrap value (if any), the number of descendents, the values for
+the corresponding split in the second tree (if this split exists in
+the second tree), and two descendents of the split such that the least
+common ancestor of these descendents is this node.  It also reports
+the MOTree internal identifiers of the nodes as Node1 (and also Node2
+if there is a matching node in the second tree).  These are useful if
+you want to use MOTree::(new => $newickstring) to parse and further
+analyze these trees.
+
+You can also run CompareTree.pl on files that contain more than one
+tree. It will compare 1st tree in each file, the 2nd tree in each
+file, etc.
+
+Both tools handle multifurcating trees, e.g., if comparing
+(((A,B),C),D,E,F);
+to
+((A,B,C),D,E,F);
+then the split ABC|DEF matches but the split AB|CDEF does not.
+
+For information, please visit
+http://www.microbesonline.org/fasttree/treecmp.html
