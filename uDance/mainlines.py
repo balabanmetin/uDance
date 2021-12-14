@@ -19,6 +19,7 @@ import numpy as np
 import treeswift as ts
 
 from uDance.fasta2dic import fasta2dic
+from uDance.tc_parser import tc_parser
 
 BINARY_SEARCH_STOP_MULTIPLIER = 0.0001
 
@@ -147,11 +148,7 @@ def mainlines(options):
         # print(numiter)
         s = ["TreeCluster.py", "-i", fasttree_out, "-m", "max", "-t", str(tcur), "-o", treecluster_out]
         call(s, stdout=nldef, stderr=nldef)
-        with open(treecluster_out, "r") as tc_output:
-            tc_output.readline()
-            lines = map(lambda x: x.strip().split('\t'), tc_output.readlines())
-        lines_sorted = sorted(lines, key=lambda x: x[1])
-        clusters = [(key, [i[0] for i in list(group)]) for key, group in groupby(lines_sorted, lambda x: x[1])]
+        clusters = tc_parser(treecluster_out)
         num_singletons = sum([len(tags) for idx, tags in clusters if idx == "-1"])
         num_clusters = len(clusters) + max(0, num_singletons - 1)
         if num_clusters == target_num:

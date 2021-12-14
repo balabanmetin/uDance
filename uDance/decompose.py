@@ -4,6 +4,7 @@ import sys
 import multiprocessing as mp
 
 from uDance.PoolAlignmentWorker import PoolAlignmentWorker
+from uDance.count_occupancy import count_occupancy
 from uDance.fasta2dic import fasta2dic
 from uDance.newick_extended import read_tree_newick
 import treeswift as ts
@@ -152,23 +153,7 @@ def decompose(options):
 
     # min_tree_coloring_sum(tstree, float(options.threshold))
     min_tree_coloring_sum_max(tstree, float(options.threshold), options.edge_threshold)
-    only_files = [f for f in listdir(options.alignment_dir_fp) if isfile(join(options.alignment_dir_fp, f)) and not f.startswith(".")]
-
-    num_genes = 0
-    occupancy = {}
-    for aln in only_files:
-        aln_input_file = join(options.alignment_dir_fp, aln)
-        basename = splitext(aln)[0]
-        try:
-            fa_dict = fasta2dic(aln_input_file, options.protein_seqs, False)
-            num_genes += 1
-            for k in fa_dict.keys():
-                if k in occupancy:
-                    occupancy[k] += 1
-                else:
-                    occupancy[k] = 1
-        except e:
-            pass
+    occupancy, num_genes = count_occupancy(options.alignment_dir_fp, options.protein_seqs)
 
     for e in tstree.traverse_postorder(internal=False):
         if e.label in occupancy:

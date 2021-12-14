@@ -1,13 +1,15 @@
 #!/usr/bin/env bash
-# $1 alignment dir
+# $1 concat alignment dir
 # $2 bbone
 # $3 char
 # $4 number of threads
+# $5 all alignments dir
 
 export ALN=$1
 BBONE=$2
 export CHARTYPE=$3
 NUMTHR=$4
+ALLALNS=$5
 
 export SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 
@@ -80,6 +82,11 @@ NSPCS=$(nw_labels -I $MNTMP/backbone_secondstage.tree | wc -l)
 THRESH=$(python -c "import math; print(math.floor(math.log2($NSPCS)))")
 awk -v thr="$THRESH" '$2 > thr' $MNTMP/RF2.tsv | cut -f1 >$MNTMP/removedsecondstage.tsv
 
-cat $MNTMP/removedsecondstage.tsv
+nw_prune $MNTMP/backbone_me.tree `cat $MNTMP/removedsecondstage.tsv` > $MNTMP/backbone_thirdstage.tree
+TreeCluster.py -i $MNTMP/backbone_thirdstage.tree -m max -t 0.7 > $MNTMP/clusters.txt
+
+python -c "from uDance.occupancy_outliers import occupancy_outliers; \
+           occupancy_outliers(\"$ALLALNS\", \"$MNTMP/clusters.txt\", \"$CHARTYPE\"=='prot')" >$MNTMP/removedthirdstage.tsv
+
 
 #rm -r $MNTMP
