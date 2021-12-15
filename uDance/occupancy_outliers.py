@@ -20,7 +20,7 @@ def occupancy_outliers(alignments_dir, clusters_file, protein):
             cl, cent = cluster(occups, k=2)
             cardi_zero = len(cl) - sum(cl)
             cardi_one = sum(cl)
-            if cardi_zero > 0 and cardi_zero < cardi_one and (cent[1]-cent[0])/cent[1] >= 0.5:
+            if 0 < cardi_zero < cardi_one and (cent[1] - cent[0])/cent[1] >= 0.6:
                 minoccup = min(occups)
                 deletes = [n for n,i in enumerate(occups) if i == minoccup]
                 deletedlist += [i for n,i in enumerate(clus) if n in deletes]

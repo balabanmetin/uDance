@@ -4,9 +4,14 @@
 
 # $1 alignment dir
 # $2 bbone
+# $3 output dir
+# $4 chartype
+# $5 num threads
 ALNDIR=$1
 BBONE=$2
 OUTDIR=$3
+CHARTYPE=$4
+NUMTHREADS=$5
 
 
 TMPDIR=`mktemp -d placementruleXXXXXX`
@@ -43,5 +48,26 @@ mapfile -t < $TMPDIR/backbone_id_dedup.txt
 nw_prune -v $BBONE "${MAPFILE[@]}" > $TMPDIR/backbone.tree
 python -c "import treeswift as ts; t=ts.read_tree_newick(\"$TMPDIR/backbone.tree\"); \
           [c.resolve_polytomies() for c in t.root.children]; print(t)" > $OUTDIR/placement/backbone.tree
+
+# $1 concat alignment
+# $2 bbone
+# $3 char
+# $4 number of threads
+# $5 all alignments dir
+bash uDance/filter_backbone.sh $OUTDIR/placement/backbone.fa $OUTDIR/placement/backbone.tree \
+      $CHARTYPE $NUMTHREADS $ALNDIR 2> $OUTDIR/placement/filtering.log > $OUTDIR/placement/filtered.txt
+
+NUMFILT=`wc -l $OUTDIR/placement/filtered.txt`
+
+if [[ "$NUMFILT" -gt 0 ]]; then
+  seqkit grep -vf $OUTDIR/placement/filtered.txt $OUTDIR/placement/backbone.fa -w 0 --quiet -o $TMPDIR/backbone.fa
+  mv $TMPDIR/backbone.fa $OUTDIR/placement/backbone.fa
+
+  seqkit grep -f $OUTDIR/placement/filtered.txt $OUTDIR/placement/backbone.fa -w 0 --quiet -o $TMPDIR/query.fa
+  cat $TMPDIR/query.fa >> $OUTDIR/placement/query.fa
+
+  nw_prune $OUTDIR/placement/backbone.tree `cat $OUTDIR/placement/filtered.txt` > $TMPDIR/backbone.tree
+  mv $TMPDIR/backbone.tree $OUTDIR/placement/backbone.tree
+fi
+
 rm -r $TMPDIR
-# run_apples.py -s $OUTDIR/placement/backbone.fa -q $OUTDIR/query.fa -t $TMPDIR/backbone_resolved.tree

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# $1 concat alignment dir
+# $1 concat alignment
 # $2 bbone
 # $3 char
 # $4 number of threads
@@ -15,7 +15,7 @@ export SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 
 export MNTMP=$(mktemp -dt filterXXXXXX)
 
-echo $MNTMP
+#echo $MNTMP
 
 export OMP_NUM_THREADS=1
 # compute backbone tree
@@ -87,6 +87,6 @@ TreeCluster.py -i $MNTMP/backbone_thirdstage.tree -m max -t 0.7 > $MNTMP/cluster
 
 python -c "from uDance.occupancy_outliers import occupancy_outliers; \
            occupancy_outliers(\"$ALLALNS\", \"$MNTMP/clusters.txt\", \"$CHARTYPE\"=='prot')" >$MNTMP/removedthirdstage.tsv
+cat $MNTMP/removedsecondstage.tsv $MNTMP/removedthirdstage.tsv
 
-
-#rm -r $MNTMP
+rm -r $MNTMP

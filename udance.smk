@@ -98,7 +98,7 @@ def aggregate_refine_bb_input(wildcards):
 
 rule refine_bb:
     input: aggregate_refine_bb_input
-    output: bbone
+    output: bbone = bbone
     params:
         o=outdir,
         method=config["infer_config"]["method"],
@@ -109,9 +109,25 @@ rule refine_bb:
             nw_reroot -d {params.o}/backbone/0/astral_output.incremental.nwk > {output}
         '''
 
+rule placement_prep:
+    input: b = bbone,
+           ind = trimalndir
+    output: aln = os.path.join(outdir,"placement/backbone.fa"),
+            qry = os.path.join(outdir,"placement/query.fa"),
+            tre = os.path.join(outdir,"placement/backbone.tree")
+    params: o=outdir,
+            char=config["chartype"]
+    resources: cpus=config["prep_config"]["cores"]
+    shell:
+        """
+            bash uDance/create_concat_alignment.sh {input.ind} {input.b} {params.o} {params.char} {resources.cpus}
+        """
+
 rule placement:
-    input: b = bbone, ind = trimalndir
-    output: j=os.path.join(outdir,"placement.jplace"), d=directory(os.path.join(outdir,"placement"))
+    input: aln = os.path.join(outdir,"placement/backbone.fa"),
+           qry = os.path.join(outdir,"placement/query.fa"),
+           tre = os.path.join(outdir,"placement/backbone.tree")
+    output: j=os.path.join(outdir,"placement.jplace")
     params: o=outdir,
             f=config["apples_config"]["filter"],
             m=config["apples_config"]["method"],
@@ -121,13 +137,12 @@ rule placement:
     log: out=os.path.join(outdir,"placement/apples2.out"), err=os.path.join(outdir,"placement/apples2.err")
     shell:
         """
-            bash uDance/create_concat_alignment.sh {input.ind} {input.b} {params.o}
             if [ "{params.char}" == "nuc" ]; then
-                run_apples.py -s {output.d}/backbone.fa -q {output.d}/query.fa -T {resources.cpus} \
-                -t {output.d}/backbone.tree -f {params.f} -m {params.m} -b {params.b} -o {output.j} > {log.out} 2> {log.err}
+                run_apples.py -s {input.aln} -q {input.qry} -T {resources.cpus} \
+                -t {input.tre} -f {params.f} -m {params.m} -b {params.b} -o {output.j} > {log.out} 2> {log.err}
             else
-                run_apples.py -p -s {output.d}/backbone.fa -q {output.d}/query.fa -T {resources.cpus} \
-                -t {output.d}/backbone.tree -f {params.f} -m {params.m} -b {params.b} -o {output.j} > {log.out} 2> {log.err}
+                run_apples.py -p -s {input.aln} -q {input.qry} -T {resources.cpus} \
+                 -t {input.tre} -f {params.f} -m {params.m} -b {params.b} -o {output.j} > {log.out} 2> {log.err}
             fi
         """
 
