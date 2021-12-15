@@ -10,7 +10,6 @@
 import sys
 import tempfile
 from functools import reduce
-from itertools import groupby
 from os import listdir
 from os.path import isfile, join
 from subprocess import Popen, PIPE, call
