@@ -78,15 +78,16 @@ checkpoint prepbackbonegenes:
     input: s=os.path.join(outdir, "backbone/0/species.txt"), a=trimalndir
     output: touch(os.path.join(outdir,"backbone/0/done.txt"))
     resources: cpus=config["prep_config"]["cores"]
-    params: ov=config["prep_config"]["overlap"]
+    params: sub=config["prep_config"]["sublength"],
+            frag=config["prep_config"]["fraglength"]
     run:
         mp.set_start_method('fork')
         prep_partition_alignments(input.a,
                                   config["chartype"] == "prot",
                                   [input.s],
                                   resources.cpus,
-                                  params.ov
-                                  )
+                                  params.sub,
+                                  params.frag)
 
 
 
@@ -102,10 +103,12 @@ rule refine_bb:
     params:
         o=outdir,
         method=config["infer_config"]["method"],
-        c=config["refine_config"]["contract"]
+        c=config["refine_config"]["contract"],
+        occup = config["refine_config"]["occupancy"]
+    resources: mem_mb=1000
     shell:
         '''
-            python run_udance.py refine -p {params.o}/backbone/0 -m {params.method} -M 1 -c {params.c}
+            python run_udance.py refine -p {params.o}/backbone/0 -m {params.method} -M {resources.mem_mb} -c {params.c} -o {params.occup}
             nw_reroot -d {params.o}/backbone/0/astral_output.incremental.nwk > {output}
         '''
 
@@ -154,12 +157,13 @@ checkpoint decompose:
         size=config["prep_config"]["cluster_size"],
         method=config["infer_config"]["method"],
         outd=outdir,
-        ov=config["prep_config"]["overlap"]
+        sub=config["prep_config"]["sublength"],
+        frag=config["prep_config"]["fraglength"]
     resources: cpus=config["prep_config"]["cores"]
     shell:
         """
             cp {input.j} {params.outd}/udance
-            python run_udance.py decompose -s {input.ind} -o {params.outd}/udance -f {params.size} -j {input.j} -m {params.method} -T {resources.cpus} -l {params.ov}
+            python run_udance.py decompose -s {input.ind} -o {params.outd}/udance -t {params.size} -j {input.j} -m {params.method} -T {resources.cpus} -l {params.sub} -f {params.frag}
         """
 
 # phy inf
@@ -187,10 +191,12 @@ rule refine:
     output: expand("%s/udance/{{cluster}}/astral_output.{approach}.nwk" % outdir, approach=["incremental", "updates"])
     params: o=outdir,
             method=config["infer_config"]["method"],
-            c=config["refine_config"]["contract"]
+            c=config["refine_config"]["contract"],
+            occup=config["refine_config"]["occupancy"]
+    resources: mem_mb=1000
     shell:
         """
-            python run_udance.py refine -p {params.o}/udance/{wildcards.cluster} -m {params.method} -M 1 -c {params.c}
+            python run_udance.py refine -p {params.o}/udance/{wildcards.cluster} -m {params.method} -M {resources.mem_mb} -c {params.c} -o {params.occup}
         """
 
 def aggregate_stitch_input(wildcards):

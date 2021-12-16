@@ -1,21 +1,20 @@
 import os
-import stat
-import shutil
-from os.path import join, isfile, abspath, expanduser
+from os.path import join
 from pathlib import Path
-import treeswift as ts
+
 import numpy as np
-from uDance.compute_bipartition_alignment import compute_bipartition_alignment
 
 
 class PoolAlignmentWorker:
-    overlap = None
+    subalignment_length = None
+    fragment_length = None
     fa_dict = None
     basename = None
 
     @classmethod
-    def set_class_attributes(cls, overlap, fa_dict, basename):
-        cls.overlap = overlap
+    def set_class_attributes(cls, subalignment_length, fragment_length, fa_dict, basename):
+        cls.subalignment_length = subalignment_length
+        cls.fragment_length = fragment_length
         cls.fa_dict = fa_dict
         cls.basename = basename
 
@@ -33,8 +32,16 @@ class PoolAlignmentWorker:
         not_all_gap = np.array([False] * aln_length)
         for s in partition_aln.values():
             not_all_gap = np.logical_or(not_all_gap, (s != b'-'))
+        removelist = []
         for k, v in partition_aln.items():
-            partition_aln[k] = v[not_all_gap]
+            ungapped = v[not_all_gap]
+            if sum(ungapped != b'-') >= 75:
+                partition_aln[k] = v[not_all_gap]
+            else:
+                removelist.append(k)
+        for k in removelist:
+            partition_aln.pop(k)
+
         trimmed_aln_length = len(next(iter(partition_aln.values())))
 
         #deduplicate the alignment
@@ -46,7 +53,7 @@ class PoolAlignmentWorker:
             else:
                 seq_keyed_dict[seq] = [name]
 
-        if trimmed_aln_length >= cls.overlap and len(seq_keyed_dict) >= 4:
+        if trimmed_aln_length >= cls.subalignment_length and len(seq_keyed_dict) >= 4:
             # write trimmed MSA fasta
             res = []
             duplist = []

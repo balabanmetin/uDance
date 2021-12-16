@@ -1,22 +1,19 @@
 import copy
-import json
-import sys
-import multiprocessing as mp
-
-from uDance.PoolAlignmentWorker import PoolAlignmentWorker
-from uDance.count_occupancy import count_occupancy
-from uDance.fasta2dic import fasta2dic
-from uDance.newick_extended import read_tree_newick
-import treeswift as ts
-from pathlib import Path
-from os import listdir
-from os.path import isfile, join, splitext
-
-from uDance.prep_partition_alignments import prep_partition_alignments
-from uDance.treecluster_sum import min_tree_coloring_sum, min_tree_coloring_sum_max
-from uDance.PoolPartitionWorker import PoolPartitionWorker
-from random import Random
 import glob
+import json
+import multiprocessing as mp
+import sys
+from os.path import join
+from pathlib import Path
+from random import Random
+
+import treeswift as ts
+
+from uDance.PoolPartitionWorker import PoolPartitionWorker
+from uDance.count_occupancy import count_occupancy
+from uDance.newick_extended import read_tree_newick
+from uDance.prep_partition_alignments import prep_partition_alignments
+from uDance.treecluster_sum import min_tree_coloring_sum_max
 
 
 # inputs: a placement tree
@@ -344,7 +341,8 @@ def decompose(options):
                                             options.protein_seqs,
                                             species_path_list,
                                             options.num_thread,
-                                            options.overlap_length)
+                                            options.subalignment_length,
+                                            options.fragment_length)
 
     tasks = balance_jobs(all_scripts, options.num_tasks)
     for i, t in enumerate(tasks):

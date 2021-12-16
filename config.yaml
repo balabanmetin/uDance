@@ -27,8 +27,10 @@ prep_config:
   cluster_size: 50
   # cores used in preperation tasks such as decompose and prep_backbone_alignments
   cores: 4
-  # minimum alignment overlap
-  overlap: 50
+  # minimum subtree alignment length
+  sublength: 100
+  # minimum fragment length
+  fraglength: 75
 
 infer_config:
   # [raxml-ng,iqtree,raxml-8]
@@ -39,4 +41,7 @@ infer_config:
 refine_config:
   # contract low support branches threshold. 0.9 for iqtree -abayes
   contract: 0.9
+  # gene occupancy threshold for inclusion
+  occupancy: 5
+
 

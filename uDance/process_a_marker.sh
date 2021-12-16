@@ -92,7 +92,7 @@ for i in `seq 1 $STARTS`; do
   run_a_start $i
 done
 
-grep "BEST SCORE" */shrunk.fasta.log | sort -k5n | tail -n 1 | cut -f1 -d ":"| sed "s/.log/.treefile/g" > bestTreename.txt
+grep -H "BEST SCORE" */shrunk.fasta.log | sort -k5n | tail -n 1 | cut -f1 -d ":"| sed "s/.log/.treefile/g" > bestTreename.txt
 cp `cat bestTreename.txt` bestTree_slash.nwk
 
 sed "s/)\//)/g" bestTree_slash.nwk > bestTree.nwk

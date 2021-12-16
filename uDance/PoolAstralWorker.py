@@ -24,6 +24,7 @@ class PoolAstralWorker:
     def worker(cls, partition_output_dir):
         genes = glob(join(partition_output_dir, "*", ""))
         median_map = dict()
+        genetrees = dict()
         for gene in genes:
             if cls.options.method == 'iqtree':
                 best = Path(join(gene, 'RUN.treefile'))
@@ -47,26 +48,59 @@ class PoolAstralWorker:
                 median_map[gene] = median(lpps)
             # contract after computing the median
             tf.contract_low_support(threshold=cls.options.contract_threshold)
-            treestr = str(tf)+"\n"
+            treestr = str(tf) + "\n"
             dupmap_file = Path(join(gene, "dupmap.txt"))
             if dupmap_file.is_file():
                 dmp = list(map(lambda x: x.strip().split("\t"), open(dupmap_file).readlines()))
-                expanded_tree_str = expand_dedupe_newick(treestr, dmp)
+                genetrees[gene] = expand_dedupe_newick(treestr, dmp)
             else:
-                expanded_tree_str = treestr
-            with open(join(gene, "raxml.expanded.nwk"), "w") as out:
-                out.write(expanded_tree_str)
+                genetrees[gene] = treestr
+
         # remove outlier genes. outlier is defined as having lower median local posterior probability than majority
         # we use 1d k-means (k=2) for outlier detection.
         clusters, centroids = cluster(list(median_map.values()), k=2)
-        if 0.8 < sum(clusters)/len(clusters) < 1 and centroids[1] - centroids[0] > 0.1:
+        if 0.8 < sum(clusters) / len(clusters) < 1 and centroids[1] - centroids[0] > 0.1:
             min_median = min([v for i, v in enumerate(median_map.values()) if clusters[i] == 1])
             numdiscard = len(clusters) - sum(clusters)
             print("In cluster %s, %d gene tree(s) with lower than "
                   "%.2f median lpp are discarded." % (partition_output_dir, numdiscard, min_median), file=stderr)
-            expanded_trees = [join(gene, "raxml.expanded.nwk") for i, gene in enumerate(median_map.keys()) if clusters[i] == 1]
+            confident_trees = {gene: ts.read_tree_newick(genetrees[gene]) for i, gene in enumerate(median_map.keys()) if
+                               clusters[i] == 1}
         else:
-            expanded_trees = glob(join(partition_output_dir, "*", "raxml.expanded.nwk"))
+            confident_trees = {gene: ts.read_tree_newick(tstr) for gene, tstr in genetrees.items()}
+        # remove low occupancy sequences from all gene trees
+        occups = dict()
+        for gn, t in confident_trees.items():
+            labels = [i.label for i in t.traverse_postorder(internal=False)]
+            for l in labels:
+                if l not in occups:
+                    occups[l] = 1
+                else:
+                    occups[l] += 1
+        low_occups = set([tag for tag in occups if occups[tag] < cls.options.occupancy_threshold])
+        try:
+            anchor_seqs = set(ts.read_tree_newick(join(partition_output_dir, "astral_constraint.nwk")).labels())
+        except:
+            anchor_seqs = set()
+        low_occups = list(low_occups.difference(anchor_seqs))
+        if len(low_occups) > 0:
+            print("In cluster %s, following low occupancy sequences are removed." % partition_output_dir, file=stderr)
+            print(low_occups, file=stderr)
+
+        for gene in confident_trees.keys():
+            nolowtree = confident_trees[gene].extract_tree_without(low_occups)
+            nolowtree.suppress_unifurcations()
+            nolowtree.is_rooted = False
+            confident_trees[gene] = nolowtree
+            if len(list(confident_trees[gene].labels())) < 4:
+                confident_trees.pop(gene)
+
+        expanded_trees = []
+        for gene in confident_trees.keys():
+            extreepath = join(gene, "raxml.expanded.nwk")
+            expanded_trees.append(extreepath)
+            with open(extreepath, "w") as out:
+                out.write(str(confident_trees[gene]) + "\n")
         astral_input_file = join(partition_output_dir, "astral_input.trees")
 
         with open(astral_input_file, 'wb') as wfd:
@@ -80,11 +114,12 @@ class PoolAstralWorker:
 
         for mtd in ["incremental", "updates"]:
             astral_output_file[mtd] = Path(join(partition_output_dir, "astral_output.%s.nwk" % mtd))
-            if mtd == "updates" and not Path(astral_const_file["updates"]).is_file() and not Path(astral_const_file["incremental"]).is_file():
+            if mtd == "updates" and not Path(astral_const_file["updates"]).is_file() and not Path(
+                    astral_const_file["incremental"]).is_file():
                 shutil.copyfile(astral_output_file["incremental"], astral_output_file["updates"])
                 break
             astral_log_file[mtd] = join(partition_output_dir, "astral.%s.log" % mtd)
-            s = ["java", "-Xmx%sG" % cls.options.memory, "-jar", cls.astral_exec, "-i", astral_input_file,
+            s = ["java", "-Xmx%sM" % cls.options.memory, "-jar", cls.astral_exec, "-i", astral_input_file,
                  "-o", astral_output_file[mtd]]
             if Path(astral_const_file[mtd]).is_file():
                 s += ["-j", astral_const_file[mtd]]

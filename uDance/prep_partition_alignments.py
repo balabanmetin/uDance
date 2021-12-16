@@ -7,7 +7,7 @@ from os import listdir
 from os.path import isfile, join, splitext
 
 
-def prep_partition_alignments(alndir, protein_flag, species_path_list, num_thread, overlap):
+def prep_partition_alignments(alndir, protein_flag, species_path_list, num_thread, subalignment_length, fragment_length):
     only_files = [f for f in listdir(alndir) if isfile(join(alndir, f)) and not f.startswith(".")]
     all_scripts = []
     for aln in only_files:
@@ -16,7 +16,7 @@ def prep_partition_alignments(alndir, protein_flag, species_path_list, num_threa
         # try:
         fa_dict = fasta2dic(aln_input_file, protein_flag, False)
         alignment_worker = PoolAlignmentWorker()
-        alignment_worker.set_class_attributes(overlap, fa_dict, basename)
+        alignment_worker.set_class_attributes(subalignment_length, fragment_length, fa_dict, basename)
         pool = mp.Pool(num_thread)
         scripts = pool.map(alignment_worker.worker, species_path_list)
         pool.close()

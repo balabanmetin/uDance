@@ -2,11 +2,11 @@ import argparse
 import sys
 from multiprocessing import cpu_count
 from os.path import abspath, expanduser
-from sys import stderr
+
 from uDance.decompose import decompose
+from uDance.mainlines import mainlines
 from uDance.refine import refine
 from uDance.stitch import stitch
-from uDance.mainlines import mainlines
 
 
 def options_config():
@@ -53,7 +53,7 @@ def options_config():
                                              description='Create local refinement tasks')
     parser_decompose.add_argument("-j", "--jplace", dest="jplace_fp",
                                   help="path to the jplace placement file", metavar="FILE")
-    parser_decompose.add_argument("-f", "--threshold", dest="threshold", default="600",
+    parser_decompose.add_argument("-t", "--threshold", dest="threshold", default="1000",
                                   help="maximum number of elements in each cluster")
     parser_decompose.add_argument("-o", "--output", dest="output_fp",
                                   help="path for the output directory where files will be placed",
@@ -68,9 +68,12 @@ def options_config():
     parser_decompose.add_argument("-T", "--threads", type=int, dest="num_thread", default=0,
                                   help="number of cores used in placement. "
                                        "0 to use all cores in the running machine", metavar="NUMBER")
-    parser_decompose.add_argument("-l", "--overlap", type=int, dest="overlap_length", default=50,
-                                  help="minimum alignment overlap length needed to use the subalignment"
-                                       "in subtree refinement", metavar="NUMBER")
+    parser_decompose.add_argument("-l", "--sublength", type=int, dest="subalignment_length", default=100,
+                                  help="minimum alignment length needed to use the subalignment"
+                                       , metavar="NUMBER")
+    parser_decompose.add_argument("-f", "--fraglength", type=int, dest="fragment_length", default=75,
+                                  help="minimum seqence(fragment) length needed to use in the subalignment"
+                                       , metavar="NUMBER")
     parser_decompose.add_argument("-c", "--constrain-outgroups", dest="constrain_outgroups", action='store_true',
                                   default=False,
                                   help="enforce outgroup topology on gene tree estimation stage.")
@@ -95,8 +98,8 @@ def options_config():
     parser_ref.add_argument("-T", "--threads", type=int, dest="num_thread", default=0,
                             help="number of cores used in the refinement. "
                                  "0 to use all cores in the running machine", metavar="NUMBER")
-    parser_ref.add_argument("-M", "--memory", type=int, dest="memory", default=1,
-                            help="memory used in the refinement. "
+    parser_ref.add_argument("-M", "--memory", type=int, dest="memory", default=1000,
+                            help="memory used in the refinement (MB). "
                                  "0 to use all cores in the running machine", metavar="NUMBER")
     parser_ref.add_argument("-m", "--method", dest="method", choices=['raxml-ng', 'iqtree', 'raxml-8'],
                             default=False, help="method for subtree inference.")
@@ -106,6 +109,9 @@ def options_config():
     parser_ref.add_argument("-c", "--contract", type=float, dest="contract_threshold", default=0.9,
                             help="contract branches with support less than given threshold"
                                  "in the inferred gene trees", metavar="NUMBER")
+    parser_ref.add_argument("-o", "--occupancy", type=int, dest="occupancy_threshold", default=1,
+                                  help="gene occupancy threshold for inclusion in ASTRAL step."
+                                       , metavar="NUMBER")
     parser_ref.set_defaults(func=refine)
 
     # stitch command subparser
