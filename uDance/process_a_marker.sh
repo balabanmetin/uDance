@@ -61,9 +61,9 @@ seqkit grep -f remaining_after_shrunk.txt $ALN -w 0 --quiet -o shrunk.fasta
 
 
 if [[ "$CHARTYPE" == "nuc" ]] ; then
-  export RAXMODEL="GTR"
+  export RAXMODEL="GTRCAT"
 else
-  export RAXMODEL="PROTLG"
+  export RAXMODEL="PROTCATLG"
 fi
 
 if [[ "$CHARTYPE" == "nuc" ]] ; then
@@ -79,7 +79,7 @@ run_a_start(){
     fasttree -nopr $FASTMODEL -gamma -seed $TREEID -log fasttree_r2.log < ../shrunk.fasta  > fasttree_r2.nwk 2> fasttree_r2.err
     python -c "import treeswift as ts; t=ts.read_tree_newick(\"fasttree_r2.nwk\"); \
             [c.resolve_polytomies() for c in t.root.children]; print(t)" > fasttree_r2_resolved.nwk
-    raxmlHPC -T 1 -m ${RAXMODEL}CAT -F -f D -D -s ../shrunk.fasta -p $TREEID -n RUN -t fasttree_r2_resolved.nwk 2> raxml.err > raxml.log
+    raxmlHPC -T 1 -m ${RAXMODEL} -F -f D -D -s ../shrunk.fasta -p $TREEID -n RUN -t fasttree_r2_resolved.nwk 2> raxml.err > raxml.log
     #if raxmlHPC -T 1 -m ${RAXMODEL}GAMMA -f e -s ../shrunk.fasta -t RAxML_result.RUN -n RUNGAMMA -p 12345 2> raxml_gamma.err > raxml_gamma.log ;
     ln -s ../shrunk.fasta
     iqtree -ntmax 1 -abayes -fast -m ${IQMODEL}+G -s shrunk.fasta -t RAxML_result.RUN -seed $TREEID > iqtree.out 2> iqtree.err

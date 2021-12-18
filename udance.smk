@@ -158,12 +158,18 @@ checkpoint decompose:
         method=config["infer_config"]["method"],
         outd=outdir,
         sub=config["prep_config"]["sublength"],
-        frag=config["prep_config"]["fraglength"]
+        frag=config["prep_config"]["fraglength"],
+        char=config["chartype"]
+
     resources: cpus=config["prep_config"]["cores"]
     shell:
         """
             cp {input.j} {params.outd}/udance
-            python run_udance.py decompose -s {input.ind} -o {params.outd}/udance -t {params.size} -j {input.j} -m {params.method} -T {resources.cpus} -l {params.sub} -f {params.frag}
+            if [ "{params.char}" == "nuc" ]; then
+                python run_udance.py decompose -s {input.ind} -o {params.outd}/udance -t {params.size} -j {input.j} -m {params.method} -T {resources.cpus} -l {params.sub} -f {params.frag}
+            else
+                python run_udance.py decompose -p -s {input.ind} -o {params.outd}/udance -t {params.size} -j {input.j} -m {params.method} -T {resources.cpus} -l {params.sub} -f {params.frag}
+            fi
         """
 
 # phy inf

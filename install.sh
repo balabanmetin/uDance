@@ -11,7 +11,7 @@ else
         raxml=8.2.12 tqdist iqtree=2.1.2 treeshrink=1.3.9 fasttree=2.1.10 julia=1.6.4 gappa=0.7.1
         source activate udance
         conda activate udance
-        pip install apples==2.0.5 kmeans1d==0.3.1
+        pip install apples==2.0.6 kmeans1d==0.3.1
 
         # julia needs to download packages during the first run. Let's do it now while we are online :)
         julia $SCRIPTS_DIR/uDance/correction_multi.jl datasmall/alignments/p0309.fasta > /dev/null
