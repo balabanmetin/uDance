@@ -5,14 +5,20 @@ set -e
 # $1 alignment path
 # $2 protein or nucleotide
 # $3 number of starting trees
-## TODO $4 method raxml-8, iqtree, or raxml-ng
+# $4 method raxml-8, or raxml-ng, TODO or iqtree
 # TODO, $5numthreads. currently fixed to 1
 
-
-pushd $(dirname $1) || (echo "cd to alignment directory failed"; exit 1)
 export ALN=$(basename $1)
 export CHARTYPE=$2
 export STARTS=$3
+export ITOOL=$4
+
+SHMT=`mktemp -dt processmarkerXXXXXX`
+cp $1 $SHMT/$ALN
+pushd $SHMT > /dev/null
+
+#pushd $(dirname $1) || (echo "cd to alignment directory failed"; exit 1)
+
 
 
 #export PROJ_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." &> /dev/null && pwd )"
@@ -62,15 +68,12 @@ seqkit grep -f remaining_after_shrunk.txt $ALN -w 0 --quiet -o shrunk.fasta
 
 if [[ "$CHARTYPE" == "nuc" ]] ; then
   export RAXMODEL="GTRCAT"
+  export NGIQMODEL="GTR"
 else
   export RAXMODEL="PROTCATLG"
+  export NGIQMODEL="LG"
 fi
 
-if [[ "$CHARTYPE" == "nuc" ]] ; then
-  export IQMODEL="GTR"
-else
-  export IQMODEL="LG"
-fi
 
 run_a_start(){
   TREEID=$1
@@ -79,10 +82,15 @@ run_a_start(){
     fasttree -nopr $FASTMODEL -gamma -seed $TREEID -log fasttree_r2.log < ../shrunk.fasta  > fasttree_r2.nwk 2> fasttree_r2.err
     python -c "import treeswift as ts; t=ts.read_tree_newick(\"fasttree_r2.nwk\"); \
             [c.resolve_polytomies() for c in t.root.children]; print(t)" > fasttree_r2_resolved.nwk
-    raxmlHPC -T 1 -m ${RAXMODEL} -F -f D -D -s ../shrunk.fasta -p $TREEID -n RUN -t fasttree_r2_resolved.nwk 2> raxml.err > raxml.log
-    #if raxmlHPC -T 1 -m ${RAXMODEL}GAMMA -f e -s ../shrunk.fasta -t RAxML_result.RUN -n RUNGAMMA -p 12345 2> raxml_gamma.err > raxml_gamma.log ;
     ln -s ../shrunk.fasta
-    iqtree -ntmax 1 -abayes -fast -m ${IQMODEL}+G -s shrunk.fasta -t RAxML_result.RUN -seed $TREEID > iqtree.out 2> iqtree.err
+    if [[ "$ITOOL" == "raxml-ng" ]] ; then
+      raxml-ng --msa shrunk.fasta --tree fasttree_r2_resolved.nwk --model ${NGIQMODEL}+G --threads 1 --seed $TREEID --prefix RUN 2> raxml.err > raxml.log
+      nw_topology -bI RUN.raxml.bestTree > RAxML_result.RUN
+    else
+      raxmlHPC -T 1 -m ${RAXMODEL} -F -f D -D -s shrunk.fasta -p $TREEID -n RUN -t fasttree_r2_resolved.nwk 2> raxml.err > raxml.log
+    fi
+    #if raxmlHPC -T 1 -m ${RAXMODEL}GAMMA -f e -s ../shrunk.fasta -t RAxML_result.RUN -n RUNGAMMA -p 12345 2> raxml_gamma.err > raxml_gamma.log ;
+    iqtree -ntmax 1 -abayes -fast -m ${NGIQMODEL}+G -s shrunk.fasta -t RAxML_result.RUN -seed $TREEID > iqtree.out 2> iqtree.err
   popd > /dev/null
 }
 
@@ -97,36 +105,9 @@ cp `cat bestTreename.txt` bestTree_slash.nwk
 
 sed "s/)\//)/g" bestTree_slash.nwk > bestTree.nwk
 rm bestTree_slash.nwk
-## awk script computes sum, average, median, min. and max of an array of numbers
-#med=`nw_labels -L bestTree.nwk | sort -n | awk '
-#  BEGIN {
-#    c = 0;
-#    sum = 0;
-#  }
-#  $1 ~ /^(\-)?[0-9]*(\.[0-9]*)?$/ {
-#    a[c++] = $1;
-#    sum += $1;
-#  }
-#  END {
-#    ave = sum / c;
-#    if( (c % 2) == 1 ) {
-#      median = a[ int(c/2) ];
-#    } else {
-#      median = ( a[c/2] + a[c/2-1] ) / 2;
-#    }
-#    OFS="\t";
-#    print sum, c, ave, median, a[0], a[c-1];
-#  }
-#' | cut -f4`
-#
-#rm $i/genes_processed/$g/bestTree_uncontracted.nwk $i/genes_processed/$g/bestTree_contracted.nwk
-#if [ `echo $med | awk '$1<0.90'` ]; then
-#	touch $i/genes_processed/$g/bestTree_uncontracted.nwk
-#	touch $i/genes_processed/$g/bestTree_contracted.nwk
-#else
-#	nw_ed $i/genes_processed/$g/UPPFFN_alignment_masked_filtered_shrunk.fasta.treefile 'b < 0.66' o > $i/genes_processed/$g/bestTree_contracted.nwk
-#	cp $i/genes_processed/$g/UPPFFN_alignment_masked_filtered_shrunk.fasta.treefile $i/genes_processed/$g/bestTree_uncontracted.nwk
-#fi
-
 
 popd > /dev/null
+
+rm -r $(dirname $1)
+
+mv $SHMT $(dirname $1)

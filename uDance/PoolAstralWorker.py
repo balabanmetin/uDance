@@ -26,16 +26,16 @@ class PoolAstralWorker:
         median_map = dict()
         genetrees = dict()
         for gene in genes:
-            if cls.options.method == 'iqtree':
-                best = Path(join(gene, 'RUN.treefile'))
-            elif cls.options.method == 'raxml-ng':
-                best = Path(join(gene, 'RUN.raxml.bestTree'))
-            elif cls.options.method == 'raxml-8':
-                best = Path(join(gene, 'bestTree.nwk'))
-            bestCollapsed = Path(join(gene, 'RUN.raxml.bestTreeCollapsed'))
-            if bestCollapsed.is_file():
-                raxtree = bestCollapsed
-            elif best.is_file():
+            # if cls.options.method == 'iqtree':
+            #     best = Path(join(gene, 'RUN.treefile'))
+            # elif cls.options.method == 'raxml-ng':
+            #     best = Path(join(gene, 'RUN.raxml.bestTree'))
+            # elif cls.options.method == 'raxml-8':
+            best = Path(join(gene, 'bestTree.nwk'))
+            #bestCollapsed = Path(join(gene, 'RUN.raxml.bestTreeCollapsed'))
+            # if bestCollapsed.is_file():
+            #     raxtree = bestCollapsed
+            if best.is_file():
                 raxtree = best
             else:
                 stderr.write("%s/bestTree.nwk does not exist. RAxML job is corrupted. \n" % gene)

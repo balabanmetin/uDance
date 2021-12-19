@@ -179,10 +179,12 @@ rule genetreeinfer:
     output:
         "%s/{stage}/{cluster}/{gene}/bestTree.nwk" % outdir
     params:
-        c=config["chartype"], s=config["infer_config"]["numstart"]
+          c=config["chartype"],
+          s=config["infer_config"]["numstart"],
+          t=config["infer_config"]["method"]
     shell:
         '''
-            bash uDance/process_a_marker.sh {input} {params.c} {params.s} > $(dirname {input})/process.log 
+            bash uDance/process_a_marker.sh {input} {params.c} {params.s} {params.t} > $(dirname {input})/process.log 
         '''
 
 
