@@ -87,13 +87,17 @@ class PoolAstralWorker:
             print("In cluster %s, following low occupancy sequences are removed." % partition_output_dir, file=stderr)
             print(low_occups, file=stderr)
 
+        tobepopped = []
         for gene in confident_trees.keys():
             nolowtree = confident_trees[gene].extract_tree_without(low_occups)
             nolowtree.suppress_unifurcations()
             nolowtree.is_rooted = False
             confident_trees[gene] = nolowtree
             if len(list(confident_trees[gene].labels())) < 4:
-                confident_trees.pop(gene)
+                tobepopped.append(gene)
+        for g in tobepopped:
+            confident_trees.pop(g)
+
 
         expanded_trees = []
         for gene in confident_trees.keys():

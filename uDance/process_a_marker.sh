@@ -46,9 +46,13 @@ echo "Running Fasttree first time"
 export OMP_NUM_THREADS=1
 
 if [[ "$CHARTYPE" == "nuc" ]] ; then
-  FASTMODEL="-nt -gtr"
+  export FASTMODEL="-nt -gtr"
+  export RAXMODEL="GTRCAT"
+  export NGIQMODEL="GTR"
 else
-  FASTMODEL="-lg"
+  export FASTMODEL="-lg"
+  export RAXMODEL="PROTCATLG"
+  export NGIQMODEL="LG"
 fi
 
 fasttree -nopr $FASTMODEL -gamma -seed 12345 -log fasttree.log < $ALN  > fasttree.nwk 2> fasttree.err
@@ -66,27 +70,18 @@ fi
 seqkit grep -f remaining_after_shrunk.txt $ALN -w 0 --quiet -o shrunk.fasta
 
 
-if [[ "$CHARTYPE" == "nuc" ]] ; then
-  export RAXMODEL="GTRCAT"
-  export NGIQMODEL="GTR"
-else
-  export RAXMODEL="PROTCATLG"
-  export NGIQMODEL="LG"
-fi
-
-
 run_a_start(){
   TREEID=$1
   mkdir -p $TREEID
   pushd $TREEID > /dev/null
-    fasttree -nopr $FASTMODEL -gamma -seed $TREEID -log fasttree_r2.log < ../shrunk.fasta  > fasttree_r2.nwk 2> fasttree_r2.err
-    python -c "import treeswift as ts; t=ts.read_tree_newick(\"fasttree_r2.nwk\"); \
-            [c.resolve_polytomies() for c in t.root.children]; print(t)" > fasttree_r2_resolved.nwk
     ln -s ../shrunk.fasta
     if [[ "$ITOOL" == "raxml-ng" ]] ; then
-      raxml-ng --msa shrunk.fasta --tree fasttree_r2_resolved.nwk --model ${NGIQMODEL}+G --threads 1 --seed $TREEID --prefix RUN 2> raxml.err > raxml.log
+      raxml-ng --msa shrunk.fasta --tree pars{1} --model ${NGIQMODEL}+G --threads 1 --seed $TREEID --prefix RUN 2> raxml.err > raxml.log
       nw_topology -bI RUN.raxml.bestTree > RAxML_result.RUN
     else
+      fasttree -nopr $FASTMODEL -gamma -seed $TREEID -log fasttree_r2.log < ../shrunk.fasta  > fasttree_r2.nwk 2> fasttree_r2.err
+      python -c "import treeswift as ts; t=ts.read_tree_newick(\"fasttree_r2.nwk\"); \
+            [c.resolve_polytomies() for c in t.root.children]; print(t)" > fasttree_r2_resolved.nwk
       raxmlHPC -T 1 -m ${RAXMODEL} -F -f D -D -s shrunk.fasta -p $TREEID -n RUN -t fasttree_r2_resolved.nwk 2> raxml.err > raxml.log
     fi
     #if raxmlHPC -T 1 -m ${RAXMODEL}GAMMA -f e -s ../shrunk.fasta -t RAxML_result.RUN -n RUNGAMMA -p 12345 2> raxml_gamma.err > raxml_gamma.log ;
