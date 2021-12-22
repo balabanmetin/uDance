@@ -1,0 +1,47 @@
+workdir: "datasmall"
+# options are ["nuc", "prot"]
+chartype: "nuc"
+
+trim_config:
+  # sites with less non-gap fraction than below will be removed
+  percent_nongap: 0.05
+
+mainlines_config:
+  # target number of taxa
+  n: 100
+  # concatenation alignment length
+  length: 5000
+
+apples_config:
+  # [FM, OLS]
+  method: FM
+  # float. (0-infinity)
+  filter: 0.2
+  # integer. (5-infinity)
+  base: 25
+
+prep_config:
+  # cluster must have a minimum diameter
+  edge_thr: 0.02
+  # approximate cluster size (no guarantees)
+  cluster_size: 50
+  # cores used in preperation tasks such as decompose and prep_backbone_alignments
+  cores: 4
+  # minimum subtree alignment length
+  sublength: 100
+  # minimum fragment length
+  fraglength: 75
+
+infer_config:
+  # [raxml-ng,iqtree,raxml-8]
+  method: "raxml-8"
+  # number of starting trees
+  numstart: 2
+
+refine_config:
+  # contract low support branches threshold. 0.9 for iqtree -abayes
+  contract: 0.9
+  # gene occupancy threshold for inclusion
+  occupancy: 5
+
+

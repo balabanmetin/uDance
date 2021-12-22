@@ -29,6 +29,9 @@ def deroot(tree):
 
 def safe_midpoint_reroot(tree, node):
     pendant_edge_length = node.edge_length
+    # can happen if the input trees are astral trees (terminal branches have no length)
+    if pendant_edge_length is None:
+        pendant_edge_length = 1
     node.edge_length = 1
     tree.root.edge_length = None # this prevents a leaf with label "ROOT" from appearing after reroot
     tree.reroot(node, 0.5)
@@ -39,6 +42,12 @@ def safe_midpoint_reroot(tree, node):
 
 
 def stitch(options):
+    for i in ["incremental", "updates"]:
+            stitch_gen(options, i)
+    return
+
+
+def stitch_gen(options, suffix):
     outmap_file = join(options.output_fp, "outgroup_map.json")
     with open(outmap_file) as o:
         outmap = json.load(o)
@@ -62,9 +71,11 @@ def stitch(options):
                 mytree.root.add_child(_stitch(c).root)
             return mytree
 
-        astral_tree_par = ts.read_tree_newick(join(options.output_fp, node.label, "astral_output.nwk"))
+        astral_tree_par = ts.read_tree_newick(join(options.output_fp, node.label, "astral_output.%s.nwk" % suffix))
         astral_tree_cons = ts.read_tree_newick(join(options.output_fp, node.label, "astral_constraint.nwk"))
         astral_tree_cons_labels = set(astral_tree_cons.labels(internal=False))
+        raxml_cons = ts.read_tree_newick(join(options.output_fp, node.label, "raxml_constraint.nwk"))
+        raxml_cons_labels = set(raxml_cons.labels(internal=False))
 
         outmap_par = outmap[node.label]
 
@@ -74,12 +85,16 @@ def stitch(options):
             uptree = ts.read_tree_newick(outmap_par["up"])
 
             uptree_labels = set(uptree.labels(internal=False))
-            non_uptree = astral_tree_cons_labels.difference(uptree_labels) # override
-
             astral_tree_par.root.edge_length = None
+            if len(raxml_cons_labels.difference(uptree_labels)) > 0:
+                candidate_set = set(raxml_cons_labels.difference(uptree_labels))
+            else:
+                # NOTE that the notuptree can be selected more wisely. Pick one that removes as few backbone
+                # species as possible. To be implemented in the future (thanks Met Wood for the idea)...
+                candidate_set = astral_tree_cons_labels.difference(uptree_labels) # override
             for i in astral_tree_par.traverse_postorder(internal=False):
-                if i.label in non_uptree:
-                    notuptree_species = i   # this has to be a backbone species
+                if i.label in candidate_set:
+                    notuptree_species = i   # this has to be a child representative or backbone species
                     break
             astral_tree_par.is_rooted = True
             astral_tree_par.reroot(notuptree_species.parent)
@@ -87,32 +102,37 @@ def stitch(options):
             mrca = astral_tree_par.mrca(list(uptree_labels))
             astral_tree_par.reroot(mrca)
             astral_tree_par.suppress_unifurcations()
-            if outmap_par['ownsup']:
-                deletelist = []
-                for c in astral_tree_par.root.children:
-                    for llab in c.traverse_postorder(internal=False):
-                        if llab.label in uptree_labels:
-                            deletelist += [c]
-                            break
 
-                for i in deletelist:
-                    for j in i.traverse_postorder(internal=False):
-                        if j.label not in uptree_labels:
-                            removed.add(j.label + "\t" + node.label)
-                    astral_tree_par.root.remove_child(i)
-                if len(astral_tree_par.root.children) != 1:
-                    raise ValueError('Astral tree is not binary.')
-                astral_tree_par.root = astral_tree_par.root.children[0]  # get rid of the degree 2 node
-            else:
-                non_uptree_mrca = astral_tree_par.mrca(list(non_uptree))
-                to_be_deleted = astral_tree_par
-                non_uptree_mrca.parent.remove_child(non_uptree_mrca)
-                for j in to_be_deleted.traverse_postorder(internal=False):
+            deletelist = []
+            for c in astral_tree_par.root.children:
+                clabs = sum([cc.label in uptree_labels for cc in c.traverse_postorder(internal=False)])
+                if clabs > 0:
+                    deletelist += [c]
+
+            bb_removed = set()  # removed backbones (can only happen while stitching "updates" tree)
+            for i in deletelist:
+                for j in i.traverse_postorder(internal=False):
                     if j.label not in uptree_labels:
                         removed.add(j.label + "\t" + node.label)
-                astral_tree_par = ts.Tree()
-                astral_tree_par.is_rooted = True
-                astral_tree_par.root = non_uptree_mrca
+                        if j.label in astral_tree_cons_labels:
+                            bb_removed.add(j.label)
+                astral_tree_par.root.remove_child(i)
+            if len(astral_tree_par.root.children) != 1:
+                raise ValueError('Astral tree is not binary.')
+            astral_tree_par.root = astral_tree_par.root.children[0]  # get rid of the degree 2 node
+
+            if not outmap_par['ownsup']:  # delete some more if ownsup is false
+                kept_bb_and_child_repr = non_uptree.difference(bb_removed)
+                non_uptree_mrca = astral_tree_par.mrca(list(kept_bb_and_child_repr))
+                if non_uptree_mrca != astral_tree_par.root:
+                    to_be_deleted = astral_tree_par
+                    non_uptree_mrca.parent.remove_child(non_uptree_mrca)
+                    for j in to_be_deleted.traverse_postorder(internal=False):
+                        if j.label not in uptree_labels:
+                            removed.add(j.label + "\t" + node.label)
+                    astral_tree_par = ts.Tree()
+                    astral_tree_par.is_rooted = True
+                    astral_tree_par.root = non_uptree_mrca
         # if there's no uptree, find a backbone species and root at the middle of it's edge.
         # if there is no backbone species either, there must be two children subsets.
         # root at a representative of first child. find mrca of one of the other children. root at there.
@@ -188,14 +208,16 @@ def stitch(options):
                 parent.add_child(ctree.root)
 
         return astral_tree_par
+
     stitched_tree = _stitch(cg.root)
     deroot(stitched_tree)
-    final_tree = join(options.output_fp, "didactic.nwk")
+    final_tree = join(options.output_fp, "udance.%s.nwk" % suffix)
     stitched_tree.write_tree_newick(final_tree)
-    unplaced = join(options.output_fp, "unplaced.csv")
+    unplaced = join(options.output_fp, "unplaced.%s.csv" % suffix)
     with open(unplaced, "w") as f:
         f.write("\n".join(removed) + "\n")
-
     return
+
+
     # for n in cg.traverse_postorder():
     #     print(outmap[n.label])

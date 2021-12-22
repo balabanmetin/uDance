@@ -1,0 +1,20 @@
+#!/bin/bash
+
+if [ $# -lt 2 ]
+then
+	echo usage: $0 referencetree estimatedtree [-simplify]
+	exit
+fi
+
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+
+cat $2 | while read x; do
+  test -z "$x" && continue
+  s=( `echo "$x" |$SCRIPT_DIR/compareTrees $1 /dev/stdin $3 2>&1|grep Frac|sed -e "s/.*Found	//g" -e "s/Total	//g" -e "s/Frac	//g" -e "s/Max.*//g" -e "s/	| //g"` ) 
+  mis=`expr ${s[1]} - ${s[0]}`
+  f=`echo 1 - ${s[2]}|bc`
+  echo ${s[1]} $mis $f
+done
+
+#Splits  Found   497     Total   498     Frac    0.998   MaxLnDf         Ratio           Ma
+
