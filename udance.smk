@@ -18,7 +18,7 @@ trimalndir = os.path.join(outdir, "trimmed")
 TRIMMEDGENES = [os.path.join(outdir, "trimdump", f) for f in os.listdir(alndir) if
                   os.path.isfile(os.path.join(alndir, f))]
 
-localrules: all, clean
+localrules: all, clean, copyspeciesfile, trimcollect
 
 rule all:
     input: expand("%s/udance.{approach}.nwk" % outdir, approach=["incremental", "updates"])
@@ -58,6 +58,7 @@ rule mainlines:
             n=config["mainlines_config"]["n"],
             l=config["mainlines_config"]["length"],
             char=config["chartype"]
+    resources: mem_mb=16000
     shell:
         """
             if [ "{params.char}" == "nuc" ]; then

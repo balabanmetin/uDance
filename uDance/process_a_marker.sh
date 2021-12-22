@@ -103,6 +103,6 @@ rm bestTree_slash.nwk
 
 popd > /dev/null
 
-rm -r $(dirname $1)
+rsync -a "$SHMT"/ $(dirname $1)
 
-mv $SHMT $(dirname $1)
+rm -rf $SHMT
