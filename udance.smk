@@ -202,7 +202,7 @@ rule refine:
             method=config["infer_config"]["method"],
             c=config["refine_config"]["contract"],
             occup=config["refine_config"]["occupancy"]
-    resources: mem_mb=1000
+    resources: mem_mb=16000
     shell:
         """
             python run_udance.py refine -p {params.o}/udance/{wildcards.cluster} -m {params.method} -M {resources.mem_mb} -c {params.c} -o {params.occup}
