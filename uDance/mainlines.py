@@ -125,6 +125,11 @@ def mainlines(options):
     with open(concat_fp.name, "r") as rf:
         with Popen(s, stdout=PIPE, stdin=rf, stderr=sys.stderr) as p:
             tree_string = p.stdout.read().decode('utf-8')
+            p.poll()
+            if p.returncode:
+                sys.stderr.write("FastTree returned a nonzero return code. Check your FastTreeMP installation.\n")
+                sys.stderr.write("Exiting.\n")
+                exit(p.returncode)
             with open(fasttree_out, "w") as fout:
                 fout.write(tree_string.strip() + "\n")
     if not tree_string:
@@ -146,7 +151,11 @@ def mainlines(options):
         numiter += 1
         # print(numiter)
         s = ["TreeCluster.py", "-i", fasttree_out, "-m", "max", "-t", str(tcur), "-o", treecluster_out]
-        call(s, stdout=nldef, stderr=nldef)
+        retcode = call(s, stdout=nldef, stderr=nldef)
+        if retcode:
+            sys.stderr.write("Treecluster returned a nonzero return code. Check your TreeCluster installation.\n")
+            sys.stderr.write("Exiting.\n")
+            sys.exit(retcode)
         clusters = tc_parser(treecluster_out)
         num_singletons = sum([len(tags) for idx, tags in clusters if idx == "-1"])
         num_clusters = len(clusters) + max(0, num_singletons - 1)

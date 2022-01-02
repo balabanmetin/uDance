@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-
+set -euo pipefail
 # Yueyu Jiang and Metin Balaban
 
 # $1 alignment dir
@@ -20,7 +20,7 @@ cat $ALNDIR/* | grep ">" | sed "s/>//g" | sort -u > $TDR/alltaxa.txt
 touch $TDR/alnpaths.txt
 ls $ALNDIR | while read aln; do
     # awk instead of wc -L because OSX doesn't have wc -L
-    sze=`sed -e "s/>\(.*\)/@>\1@/g" $ALNDIR/$aln|tr -d "\n"|tr "@" "\n"|tail -n+2 | head -n 2 | tail -n 1 | awk '{print length}'`
+    sze=$(sed -e "s/>\(.*\)/@>\1@/g" $ALNDIR/$aln |tr -d "\n"|tr "@" "\n"| sed -n '3p' | awk '{print length}')
     grep ">" $ALNDIR/$aln | sed "s/>//g" | sort -u > $TDR/thistaxa.txt
     comm -23 $TDR/alltaxa.txt $TDR/thistaxa.txt > $TDR/missing.txt
     (cat $ALNDIR/$aln; while read tx; do printf ">$tx\n"; dd if=/dev/zero bs=$sze count=1 2>/dev/null | tr '\0' "-" | tr '\0' '-'; printf "\n"; done < $TDR/missing.txt) | gzip -c - > $TDR/$aln.gz
@@ -57,7 +57,10 @@ python -c "import treeswift as ts; t=ts.read_tree_newick(\"$TDR/backbone.tree\")
 bash uDance/filter_backbone.sh $OUTDIR/placement/backbone.fa $OUTDIR/placement/backbone.tree \
       $CHARTYPE $NUMTHREADS $ALNDIR 2> $OUTDIR/placement/filtering.log > $OUTDIR/placement/filtered.txt
 
+# useless cat
 NUMFILT=`cat $OUTDIR/placement/filtered.txt | wc -l`
+
+printf "%d low quality sequences are removed from the backbone.\n" $NUMFILT >&2
 
 if [[ "$NUMFILT" -gt 0 ]]; then
   seqkit grep -vf $OUTDIR/placement/filtered.txt $OUTDIR/placement/backbone.fa -w 0 --quiet -o $TDR/backbone.fa

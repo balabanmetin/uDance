@@ -1,7 +1,7 @@
 from os.path import join
 from glob import glob
 from pathlib import Path
-from sys import stderr
+from sys import stderr, exit, stdout
 import shutil
 from subprocess import Popen, PIPE
 import treeswift as ts
@@ -130,6 +130,11 @@ class PoolAstralWorker:
             with open(astral_log_file[mtd], "w") as lg:
                 with Popen(s, stdout=PIPE, stdin=PIPE, stderr=lg) as p:
                     astral_stdout = p.stdout.read().decode('utf-8')
+                    p.poll()
+                    if p.returncode:
+                        print("ASTRAL job on partition %s has failed. Check the log file %s for further information."
+                              % (partition_output_dir, astral_log_file[mtd]), file=stderr, flush=True)
+                        exit(p.returncode)
                     # print(astral_stdout)
         # if cls.options.use_gpu:
         #     gpu_opt = ""

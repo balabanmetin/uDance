@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -euo pipefail
 # $1 concat alignment
 # $2 bbone
 # $3 char

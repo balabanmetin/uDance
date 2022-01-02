@@ -2,6 +2,12 @@ workdir: "datasmall"
 # options are ["nuc", "prot"]
 chartype: "nuc"
 
+resources:
+  # MBs
+  large_memory: 16000
+  # cores used in monolithic tasks such as decompose and prep_backbone_alignments
+  cores: 4
+
 trim_config:
   # sites with less non-gap fraction than below will be removed
   percent_nongap: 0.05
@@ -25,8 +31,6 @@ prep_config:
   edge_thr: 0.02
   # approximate cluster size (no guarantees)
   cluster_size: 50
-  # cores used in preperation tasks such as decompose and prep_backbone_alignments
-  cores: 4
   # minimum subtree alignment length
   sublength: 100
   # minimum fragment length
@@ -36,7 +40,7 @@ infer_config:
   # [raxml-ng,iqtree,raxml-8]
   method: "raxml-8"
   # number of starting trees
-  numstart: 2
+  numstart: 1
 
 refine_config:
   # contract low support branches threshold. 0.9 for iqtree -abayes

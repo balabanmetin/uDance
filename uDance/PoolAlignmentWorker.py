@@ -36,9 +36,11 @@ class PoolAlignmentWorker:
         for k, v in partition_aln.items():
             ungapped = v[not_all_gap]
             if sum(ungapped != b'-') >= 75:
-                partition_aln[k] = v[not_all_gap]
+                partition_aln[k] = ungapped
             else:
                 removelist.append(k)
+        print("%d fragmentary sequences are removed from gene %s on partition %s." %
+              (len(removelist), cls.basename, partition_output_dir))
         for k in removelist:
             partition_aln.pop(k)
 

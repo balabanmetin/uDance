@@ -1,33 +1,47 @@
 
 import os
+import time
 import multiprocessing as mp
 from uDance.prep_partition_alignments import prep_partition_alignments
+from contextlib import redirect_stdout,redirect_stderr
+
+
 
 # configfile: "config.yaml"
 
 #include: "workflows/decompose.smk"
-
 wdr = config["workdir"]
 outdir = os.path.join(wdr, "output")
 alndir = os.path.join(wdr, "alignments")
 bbspec = os.path.join(wdr, "species.txt")
 bbone = os.path.join(outdir, "backbone.nwk")
 trimalndir = os.path.join(outdir, "trimmed")
+timestr = time.strftime("%Y%m%d-%H%M%S")
 
 
 TRIMMEDGENES = [os.path.join(outdir, "trimdump", f) for f in os.listdir(alndir) if
                   os.path.isfile(os.path.join(alndir, f))]
+print("hello!")
+udance_logpath = os.path.abspath(os.path.join(".snakemake/log", timestr + "-udance.log"))
+
 
 localrules: all, clean, copyspeciesfile, trimcollect
 
 rule all:
     input: expand("%s/udance.{approach}.nwk" % outdir, approach=["incremental", "updates"])
 
+onerror:
+    print("Execution failed. Logfile of the execution: ")
+    print(udance_logpath)
+
+onsuccess:
+    print("Execution is successful. Logfile of the execution: ")
+    print(udance_logpath)
+
 rule clean:
-    params: outdir
     shell:
         """
-            rm -r {params} data2/count.txt
+            rm -r {outdir} 
         """
 
 rule trimtaper:
@@ -36,19 +50,22 @@ rule trimtaper:
     params: thr=config["trim_config"]["percent_nongap"]
     shell:
         """
+            (
             TFA=`mktemp -t XXXXXX.fa`
             trimal -in {input} -out $TFA -gt {params.thr} 
             julia uDance/correction_multi.jl $TFA > {output}
             rm $TFA
+            ) >> {udance_logpath} 2>&1
         """
 
 rule trimcollect:
     input: TRIMMEDGENES
     output: directory(os.path.join(outdir, "trimmed"))
-    params: o=outdir
     shell:
         """
-            mv {params.o}/trimdump {output}
+            (
+            mv {outdir}/trimdump {output}
+            ) >> {udance_logpath} 2>&1
         """
 
 rule mainlines:
@@ -58,14 +75,16 @@ rule mainlines:
             n=config["mainlines_config"]["n"],
             l=config["mainlines_config"]["length"],
             char=config["chartype"]
-    resources: mem_mb=16000
+    resources: mem_mb=config["resources"]["large_memory"]
     shell:
         """
+            (
             if [ "{params.char}" == "nuc" ]; then
                 python run_udance.py mainlines -s {input} -n {params.n} -l {params.l} > {output}
             else
                 python run_udance.py mainlines -s {input} -n {params.n} -l {params.l} -p > {output}
             fi
+            ) >> {udance_logpath} 2>&1
         """
 
 rule copyspeciesfile:
@@ -73,22 +92,36 @@ rule copyspeciesfile:
     output: os.path.join(outdir, "backbone/0/species.txt")
     shell:
         """
+            (
             cp {input} {output}
+            ) >> {udance_logpath} 2>&1
         """
 checkpoint prepbackbonegenes:
     input: s=os.path.join(outdir, "backbone/0/species.txt"), a=trimalndir
     output: touch(os.path.join(outdir,"backbone/0/done.txt"))
-    resources: cpus=config["prep_config"]["cores"]
+    resources: cpus=config["resources"]["cores"],
+               mem_mb=config["resources"]["large_memory"]
     params: sub=config["prep_config"]["sublength"],
-            frag=config["prep_config"]["fraglength"]
-    run:
-        mp.set_start_method('fork')
-        prep_partition_alignments(input.a,
-                                  config["chartype"] == "prot",
-                                  [input.s],
-                                  resources.cpus,
-                                  params.sub,
-                                  params.frag)
+            frag=config["prep_config"]["fraglength"],
+            char=config["chartype"]
+    shell:
+         # python calling shell calling python. looks terrible but
+         # this way we are avoiding forking in snakemake main process
+        '''
+            (
+            python -c  "import multiprocessing as mp; \
+                        mp.set_start_method('fork'); \
+                        from uDance.prep_partition_alignments import prep_partition_alignments; \
+                        prep_partition_alignments('{input.a}', \
+                                      '{params.char}' == 'prot', \
+                                      ['{input.s}'], \
+                                      {resources.cpus}, \
+                                      {params.sub}, \
+                                      {params.frag})"
+            ) >> {udance_logpath} 2>&1
+        '''
+        # with open(params.logpath, "a") as log_file:
+        #     print(params.logpath)
 
 
 
@@ -102,15 +135,16 @@ rule refine_bb:
     input: aggregate_refine_bb_input
     output: bbone = bbone
     params:
-        o=outdir,
         method=config["infer_config"]["method"],
         c=config["refine_config"]["contract"],
         occup = config["refine_config"]["occupancy"]
-    resources: mem_mb=1000
+    resources: mem_mb=config["resources"]["large_memory"]
     shell:
         '''
-            python run_udance.py refine -p {params.o}/backbone/0 -m {params.method} -M {resources.mem_mb} -c {params.c} -o {params.occup}
-            nw_reroot -d {params.o}/backbone/0/astral_output.incremental.nwk > {output}
+            (
+            python run_udance.py refine -p {outdir}/backbone/0 -m {params.method} -M {resources.mem_mb} -c {params.c} -o {params.occup}
+            nw_reroot -d {outdir}/backbone/0/astral_output.incremental.nwk > {output}
+            ) >> {udance_logpath} 2>&1
         '''
 
 rule placement_prep:
@@ -119,12 +153,14 @@ rule placement_prep:
     output: aln = os.path.join(outdir,"placement/backbone.fa"),
             qry = os.path.join(outdir,"placement/query.fa"),
             tre = os.path.join(outdir,"placement/backbone.tree")
-    params: o=outdir,
-            char=config["chartype"]
-    resources: cpus=config["prep_config"]["cores"]
+    params: char=config["chartype"]
+    resources: cpus=config["resources"]["cores"],
+               mem_mb=config["resources"]["large_memory"]
     shell:
         """
-            bash uDance/create_concat_alignment.sh {input.ind} {input.b} {params.o} {params.char} {resources.cpus}
+            (
+            bash uDance/create_concat_alignment.sh {input.ind} {input.b} {outdir} {params.char} {resources.cpus}
+            ) >> {udance_logpath} 2>&1            
         """
 
 rule placement:
@@ -132,15 +168,15 @@ rule placement:
            qry = os.path.join(outdir,"placement/query.fa"),
            tre = os.path.join(outdir,"placement/backbone.tree")
     output: j=os.path.join(outdir,"placement.jplace")
-    params: o=outdir,
-            f=config["apples_config"]["filter"],
+    params: f=config["apples_config"]["filter"],
             m=config["apples_config"]["method"],
             b=config["apples_config"]["base"],
             char=config["chartype"]
-    resources: cpus=config["prep_config"]["cores"]
+    resources: cpus=config["resources"]["cores"]
     log: out=os.path.join(outdir,"placement/apples2.out"), err=os.path.join(outdir,"placement/apples2.err")
     shell:
         """
+            (
             if [ "{params.char}" == "nuc" ]; then
                 run_apples.py -s {input.aln} -q {input.qry} -T {resources.cpus} \
                 -t {input.tre} -f {params.f} -m {params.m} -b {params.b} -o {output.j} > {log.out} 2> {log.err}
@@ -148,6 +184,7 @@ rule placement:
                 run_apples.py -p -s {input.aln} -q {input.qry} -T {resources.cpus} \
                  -t {input.tre} -f {params.f} -m {params.m} -b {params.b} -o {output.j} > {log.out} 2> {log.err}
             fi
+            ) >> {udance_logpath} 2>&1            
         """
 
 
@@ -157,20 +194,22 @@ checkpoint decompose:
     params:
         size=config["prep_config"]["cluster_size"],
         method=config["infer_config"]["method"],
-        outd=outdir,
         sub=config["prep_config"]["sublength"],
         frag=config["prep_config"]["fraglength"],
         char=config["chartype"]
 
-    resources: cpus=config["prep_config"]["cores"]
+    resources: cpus=config["resources"]["cores"],
+               mem_mb=config["resources"]["large_memory"]
     shell:
         """
-            cp {input.j} {params.outd}/udance
+            (
+            cp {input.j} {outdir}/udance
             if [ "{params.char}" == "nuc" ]; then
-                python run_udance.py decompose -s {input.ind} -o {params.outd}/udance -t {params.size} -j {input.j} -m {params.method} -T {resources.cpus} -l {params.sub} -f {params.frag}
+                python run_udance.py decompose -s {input.ind} -o {outdir}/udance -t {params.size} -j {input.j} -m {params.method} -T {resources.cpus} -l {params.sub} -f {params.frag}
             else
-                python run_udance.py decompose -p -s {input.ind} -o {params.outd}/udance -t {params.size} -j {input.j} -m {params.method} -T {resources.cpus} -l {params.sub} -f {params.frag}
+                python run_udance.py decompose -p -s {input.ind} -o {outdir}/udance -t {params.size} -j {input.j} -m {params.method} -T {resources.cpus} -l {params.sub} -f {params.frag}
             fi
+            ) >> {udance_logpath} 2>&1
         """
 
 # phy inf
@@ -185,8 +224,14 @@ rule genetreeinfer:
           t=config["infer_config"]["method"]
     shell:
         '''
-            bash uDance/process_a_marker.sh {input} {params.c} {params.s} {params.t} > $(dirname {input})/process.log 
+            # many instances of this rule may run simultaneously. To reduce the IO overhead, we "sponge" the output
+            # before appending to udance_logpath
+            source uDance/mysponge.sh
+            (
+            bash uDance/process_a_marker.sh {input} {params.c} {params.s} {params.t}
+            ) 2>&1 | mysponge >> {udance_logpath} 
         '''
+
 
 
 def aggregate_refine_input(wildcards):
@@ -198,14 +243,15 @@ def aggregate_refine_input(wildcards):
 rule refine:
     input: aggregate_refine_input
     output: expand("%s/udance/{{cluster}}/astral_output.{approach}.nwk" % outdir, approach=["incremental", "updates"])
-    params: o=outdir,
-            method=config["infer_config"]["method"],
+    params: method=config["infer_config"]["method"],
             c=config["refine_config"]["contract"],
             occup=config["refine_config"]["occupancy"]
-    resources: mem_mb=16000
+    resources: mem_mb=config["resources"]["large_memory"]
     shell:
         """
-            python run_udance.py refine -p {params.o}/udance/{wildcards.cluster} -m {params.method} -M {resources.mem_mb} -c {params.c} -o {params.occup}
+            (
+            python run_udance.py refine -p {outdir}/udance/{wildcards.cluster} -m {params.method} -M {resources.mem_mb} -c {params.c} -o {params.occup}
+            ) >> {udance_logpath} 2>&1
         """
 
 def aggregate_stitch_input(wildcards):
@@ -217,10 +263,10 @@ def aggregate_stitch_input(wildcards):
 rule stitch:
     input: aggregate_stitch_input
     output: expand("%s/udance.{approach}.nwk" % outdir, approach=["incremental", "updates"])
-    params: o=outdir
     shell:
         """
-           python run_udance.py stitch -o {params.o}/udance
+           (
+           python run_udance.py stitch -o {outdir}/udance
            cp {outdir}/udance/udance.*.nwk {outdir}
+           ) >> {udance_logpath} 2>&1
         """
-
