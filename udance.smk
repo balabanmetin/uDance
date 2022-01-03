@@ -1,13 +1,5 @@
 
 import os
-import time
-import multiprocessing as mp
-from uDance.prep_partition_alignments import prep_partition_alignments
-from contextlib import redirect_stdout,redirect_stderr
-
-
-
-# configfile: "config.yaml"
 
 #include: "workflows/decompose.smk"
 wdr = config["workdir"]
@@ -16,8 +8,6 @@ alndir = os.path.join(wdr, "alignments")
 bbspec = os.path.join(wdr, "species.txt")
 bbone = os.path.join(outdir, "backbone.nwk")
 trimalndir = os.path.join(outdir, "trimmed")
-timestr = time.strftime("%Y%m%d-%H%M%S")
-
 
 TRIMMEDGENES = [os.path.join(outdir, "trimdump", f) for f in os.listdir(alndir) if
                   os.path.isfile(os.path.join(alndir, f))]

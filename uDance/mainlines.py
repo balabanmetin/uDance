@@ -108,7 +108,7 @@ def mainlines(options):
     concat = [i.tobytes().decode("utf-8") for i in concat]
     concat_fp = tempfile.NamedTemporaryFile(delete=False, mode='w+t')
     fasttree_log = tempfile.NamedTemporaryFile(delete=False, mode='w+t').name
-    fasttree_out = "mainlines_fasttree.nwk"
+    fasttree_out = tempfile.NamedTemporaryFile(delete=False, mode='w+t').name
 
     with open(concat_fp.name, "w") as f:
         for ids, seq in enumerate(concat):

@@ -35,7 +35,7 @@ def options_config():
                                   help="path for input directory which contains "
                                        "extended reference alignment files (FASTA), "
                                        "containing reference and query sequences.",
-                                  metavar="FILE")
+                                  metavar="DIRECTORY")
     parser_mainlines.add_argument("-n", "--number", type=int, dest="target_num", metavar='NUMBER', default=1000,
                                   help="number of taxa to be selected.")
     parser_mainlines.add_argument("-p", "--protein", dest="protein_seqs", action='store_true', default=False,
