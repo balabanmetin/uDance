@@ -22,12 +22,17 @@ timestr = time.strftime("%Y%m%d-%H%M%S")
 TRIMMEDGENES = [os.path.join(outdir, "trimdump", f) for f in os.listdir(alndir) if
                   os.path.isfile(os.path.join(alndir, f))]
 
-udance_logpath = os.path.abspath(os.path.join(wdr, timestr + "-udance.log"))
+udance_logpath = os.path.abspath(os.path.join(wdr, "udance.log"))
 
 localrules: all, clean, copyspeciesfile, trimcollect
 
 rule all:
     input: expand("%s/udance.{approach}.nwk" % outdir, approach=["incremental", "updates"])
+
+onstart:
+    shell( "if [ -f '{udance_logpath}' ]; then echo '{udance_logpath} already exists."
+            "Moving it to {udance_logpath}.bak'; mv {udance_logpath} {udance_logpath}.bak;"
+            "else touch {udance_logpath}; fi")
 
 onerror:
     print("Execution failed. Logfile of the execution: ")
