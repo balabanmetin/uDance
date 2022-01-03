@@ -54,36 +54,53 @@ nw_labels -I $BBONE | xargs -n1 -P$NUMTHR -I% bash -c "onequery %" | sort -k2n >
 NSPCS=$(nw_labels -I $BBONE | wc -l)
 THRESH=$(python -c "import math; print(math.floor(math.log2($NSPCS)))")
 awk -v thr="$THRESH" '$2 > thr' $MNTMP/RF.tsv | cut -f1 >$MNTMP/removedfirststage.tsv
+NUMRMFIRST=$(wc -l < $MNTMP/removedfirststage.tsv)
 
-seqkit grep -vf $MNTMP/removedfirststage.tsv -w 0 --quiet $ALN >$MNTMP/backbone_secondstage.fa
+# if there is any large RF placements, remove from the tree and place them one by one
+if [ "$NUMRMFIRST" -gt 0 ] ; then
+  seqkit grep -vf $MNTMP/removedfirststage.tsv -w 0 --quiet $ALN >$MNTMP/backbone_secondstage.fa
 
-nw_prune $MNTMP/backbone_me.tree $(cat $MNTMP/removedfirststage.tsv) >$MNTMP/backbone_secondstage.tree
+  nw_prune $MNTMP/backbone_me.tree $(cat $MNTMP/removedfirststage.tsv) >$MNTMP/backbone_secondstage.tree
 
-if [ "$CHARTYPE" == "nuc" ]; then
-  fasttree -nt -nosupport -nopr -nome -noml -intree $MNTMP/backbone_secondstage.tree <$MNTMP/backbone_secondstage.fa >$MNTMP/backbone_secondstage_reestimated.tree
-  build_applesdtb.py -T $NUMTHR -f 0.2 -s $MNTMP/backbone_secondstage.fa -t $MNTMP/backbone_secondstage_reestimated.tree -D -o $MNTMP/apples_secondstage.dtb
+  if [ "$CHARTYPE" == "nuc" ]; then
+    fasttree -nt -nosupport -nopr -nome -noml -intree $MNTMP/backbone_secondstage.tree <$MNTMP/backbone_secondstage.fa >$MNTMP/backbone_secondstage_reestimated.tree
+    build_applesdtb.py -T $NUMTHR -f 0.2 -s $MNTMP/backbone_secondstage.fa -t $MNTMP/backbone_secondstage_reestimated.tree -D -o $MNTMP/apples_secondstage.dtb
+  else
+    fasttree -nosupport -nopr -nome -noml -intree $MNTMP/backbone_secondstage.tree <$MNTMP/backbone_secondstage.fa >$MNTMP/backbone_secondstage_reestimated.tree
+    build_applesdtb.py -p -T $NUMTHR -f 0.2 -s $MNTMP/backbone_secondstage.fa -t $MNTMP/backbone_secondstage_reestimated.tree -D -o $MNTMP/apples_secondstage.dtb
+  fi
+
+# no need for parallelization using xargs because we expect only a handful of species in removedfirststage.tsv
+  while read sp; do
+    seqkit grep -f <(echo $sp) -w 0 --quiet $ALN >$MNTMP/query_secondstage.fa
+    if [ "$CHARTYPE" == "nuc" ]; then
+      run_apples.py -a $MNTMP/apples_secondstage.dtb -q $MNTMP/query_secondstage.fa -f 0.2 -b 25 -o $MNTMP/apples.jplace -T 1
+    else
+      run_apples.py -p -a $MNTMP/apples_secondstage.dtb -q $MNTMP/query_secondstage.fa -f 0.2 -b 25 -o $MNTMP/apples.jplace -T 1
+    fi
+    gappa examine graft --jplace-path=$MNTMP/apples.jplace --out-dir=$MNTMP --allow-file-overwriting >/dev/null 2>/dev/null
+    n1=$($SCRIPTS_DIR/tools/compareTrees.missingBranch $MNTMP/backbone_me.tree $MNTMP/apples.newick -simplify | awk '{printf $2}')
+    printf "$sp\t$n1\n"
+  done < $MNTMP/removedfirststage.tsv > $MNTMP/RF2.tsv
+
+  NSPCS=$(nw_labels -I $MNTMP/backbone_secondstage.tree | wc -l)
+  THRESH=$(python -c "import math; print(math.floor(math.log2($NSPCS)))")
+  awk -v thr="$THRESH" '$2 > thr' $MNTMP/RF2.tsv | cut -f1 >$MNTMP/removedsecondstage.tsv
+  NUMRMSECOND=$(wc -l < $MNTMP/removedsecondstage.tsv)
+
+  if [ "$NUMRMSECOND" -gt 0 ] ; then
+    nw_prune $MNTMP/backbone_me.tree `cat $MNTMP/removedsecondstage.tsv` > $MNTMP/backbone_thirdstage.tree
+  else
+    # nothing to be removed
+    cp $MNTMP/backbone_me.tree $MNTMP/backbone_thirdstage.tree
+  fi
+
+#there is no large RF placements in the first stage. Proceed with occupancy filter.
 else
-  fasttree -nosupport -nopr -nome -noml -intree $MNTMP/backbone_secondstage.tree <$MNTMP/backbone_secondstage.fa >$MNTMP/backbone_secondstage_reestimated.tree
-  build_applesdtb.py -p -T $NUMTHR -f 0.2 -s $MNTMP/backbone_secondstage.fa -t $MNTMP/backbone_secondstage_reestimated.tree -D -o $MNTMP/apples_secondstage.dtb
+  cp $MNTMP/backbone_me.tree $MNTMP/backbone_thirdstage.tree
+  touch $MNTMP/removedsecondstage.tsv
 fi
 
-while read sp; do
-  seqkit grep -f <(echo $sp) -w 0 --quiet $ALN >$MNTMP/query_secondstage.fa
-  if [ "$CHARTYPE" == "nuc" ]; then
-    run_apples.py -a $MNTMP/apples_secondstage.dtb -q $MNTMP/query_secondstage.fa -f 0.2 -b 25 -o $MNTMP/apples.jplace -T 1
-  else
-    run_apples.py -p -a $MNTMP/apples_secondstage.dtb -q $MNTMP/query_secondstage.fa -f 0.2 -b 25 -o $MNTMP/apples.jplace -T 1
-  fi
-  gappa examine graft --jplace-path=$MNTMP/apples.jplace --out-dir=$MNTMP --allow-file-overwriting >/dev/null 2>/dev/null
-  n1=$($SCRIPTS_DIR/tools/compareTrees.missingBranch $MNTMP/backbone_me.tree $MNTMP/apples.newick -simplify | awk '{printf $2}')
-  printf "$sp\t$n1\n"
-done < $MNTMP/removedfirststage.tsv > $MNTMP/RF2.tsv
-
-NSPCS=$(nw_labels -I $MNTMP/backbone_secondstage.tree | wc -l)
-THRESH=$(python -c "import math; print(math.floor(math.log2($NSPCS)))")
-awk -v thr="$THRESH" '$2 > thr' $MNTMP/RF2.tsv | cut -f1 >$MNTMP/removedsecondstage.tsv
-
-nw_prune $MNTMP/backbone_me.tree `cat $MNTMP/removedsecondstage.tsv` > $MNTMP/backbone_thirdstage.tree
 TreeCluster.py -i $MNTMP/backbone_thirdstage.tree -m max -t 0.7 > $MNTMP/clusters.txt
 
 python -c "from uDance.occupancy_outliers import occupancy_outliers; \
