@@ -55,11 +55,13 @@ class PoolAlignmentWorker:
             else:
                 seq_keyed_dict[seq] = [name]
 
+        seq_keyed_dict = {k: sorted(v) for k, v in seq_keyed_dict.items()}
+
         if trimmed_aln_length >= cls.subalignment_length and len(seq_keyed_dict) >= 4:
             # write trimmed MSA fasta
             res = []
             duplist = []
-            for k, v in seq_keyed_dict.items():
+            for k, v in sorted(seq_keyed_dict.items()):
                 res.append(">" + v[0])
                 res.append(k)
                 if len(v) > 1:
