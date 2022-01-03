@@ -21,9 +21,8 @@ timestr = time.strftime("%Y%m%d-%H%M%S")
 
 TRIMMEDGENES = [os.path.join(outdir, "trimdump", f) for f in os.listdir(alndir) if
                   os.path.isfile(os.path.join(alndir, f))]
-print("hello!")
-udance_logpath = os.path.abspath(os.path.join(".snakemake/log", timestr + "-udance.log"))
 
+udance_logpath = os.path.abspath(os.path.join(wdr, timestr + "-udance.log"))
 
 localrules: all, clean, copyspeciesfile, trimcollect
 
