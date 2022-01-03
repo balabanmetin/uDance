@@ -81,7 +81,7 @@ run_a_start(){
     ln -s ../shrunk.fasta
     if [[ "$ITOOL" == "raxml-ng" ]] ; then
       if raxml-ng --msa shrunk.fasta --tree pars{1} --model ${NGIQMODEL}+G --threads 1 --seed $TREEID --prefix RUN --lh-epsilon 0.5 > raxml-ng.log 2>&1; then
-        nw_topology -bI RUN.raxml.bestTree > RAxML_result.RUN
+        nw_topology -bI RUN.raxml.bestTree | nw_order - > RAxML_result.RUN
       else
         grep "ERROR" raxml-ng.log >&2
         echo "WARNING: RAxML-NG failed to infer a tree using $ALN. Continuing using RAxML-8" >&2
@@ -91,11 +91,11 @@ run_a_start(){
     fi
     if [[ "$ITOOL" == "raxml-8" ]] ; then
       # start with iqtree -fast tree
-      iqtree -ntmax 1 -fast -m ${NGIQMODEL}+G -s shrunk.fasta -seed $TREEID > iqtree_start.out 2> iqtree_start.err
+      iqtree -ntmax 1 -fast -m ${NGIQMODEL}+G -s shrunk.fasta -seed $TREEID --prefix START> iqtree_start.out 2> iqtree_start.err
       #fasttree -nopr $FASTMODEL -gamma -seed $TREEID -log fasttree_r2.log < ../shrunk.fasta  > fasttree_r2.nwk 2> fasttree_r2.err
       #python -c "import treeswift as ts; t=ts.read_tree_newick(\"fasttree_r2.nwk\"); \
       #      [c.resolve_polytomies() for c in t.root.children]; print(t)" > fasttree_r2_resolved.nwk
-      raxmlHPC -T 1 -m ${RAXMODEL} -F -f D -D -s shrunk.fasta -p $TREEID -n RUN -t shrunk.fasta.treefile > raxml-8.log 2>&1
+      raxmlHPC -T 1 -m ${RAXMODEL} -F -f D -D -s shrunk.fasta -p $TREEID -n RUN -t START.treefile > raxml-8.log 2>&1
     fi
     #if raxmlHPC -T 1 -m ${RAXMODEL}GAMMA -f e -s ../shrunk.fasta -t RAxML_result.RUN -n RUNGAMMA -p 12345 2> raxml_gamma.err > raxml_gamma.log ;
     iqtree -ntmax 1 -abayes -fast -m ${NGIQMODEL}+G -s shrunk.fasta -t RAxML_result.RUN -seed $TREEID --redo > iqtree.out 2> iqtree.err

@@ -51,8 +51,8 @@ def subsample_align(nm, mins, size):
 
 
 def mainlines(options):
-    only_files = [join(options.alignment_dir_fp, f) for f in listdir(options.alignment_dir_fp) if
-                  isfile(join(options.alignment_dir_fp, f)) and not f.startswith(".")]
+    only_files = sorted([join(options.alignment_dir_fp, f) for f in listdir(options.alignment_dir_fp) if
+                  isfile(join(options.alignment_dir_fp, f)) and not f.startswith(".")])
     np.random.seed(42)
     gap_thr = options.gap_threshold
     concat_len = options.concat_length
