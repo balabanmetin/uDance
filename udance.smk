@@ -166,7 +166,8 @@ rule placement:
             m=config["apples_config"]["method"],
             b=config["apples_config"]["base"],
             char=config["chartype"]
-    resources: cpus=config["resources"]["cores"]
+    resources: cpus=config["resources"]["cores"],
+               mem_mb=config["resources"]["large_memory"]
     log: out=os.path.join(outdir,"placement/apples2.out"), err=os.path.join(outdir,"placement/apples2.err")
     shell:
         """
