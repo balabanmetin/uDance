@@ -1,12 +1,16 @@
 import json
 from os.path import join
 import treeswift as ts
+from pathlib import Path
 
 def deroot(tree):
     if len(tree.root.children) > 2:
         tree.is_rooted = False
     elif len(tree.root.children) == 2:
         left, right = tree.root.children
+        for n in [left, right]:
+            if n.edge_length is None:
+                n.edge_length = 0
         if left.is_leaf():
             ln = left.edge_length + right.edge_length
             tree.root.remove_child(left)
@@ -74,8 +78,12 @@ def stitch_gen(options, suffix):
         astral_tree_par = ts.read_tree_newick(join(options.output_fp, node.label, "astral_output.%s.nwk" % suffix))
         astral_tree_cons = ts.read_tree_newick(join(options.output_fp, node.label, "astral_constraint.nwk"))
         astral_tree_cons_labels = set(astral_tree_cons.labels(internal=False))
-        raxml_cons = ts.read_tree_newick(join(options.output_fp, node.label, "raxml_constraint.nwk"))
-        raxml_cons_labels = set(raxml_cons.labels(internal=False))
+        raxml_cons_file = join(options.output_fp, node.label, "raxml_constraint.nwk")
+        if Path(raxml_cons_file).is_file(): 
+            raxml_cons = ts.read_tree_newick(raxml_cons_file)
+            raxml_cons_labels = set(raxml_cons.labels(internal=False))
+        else:
+            raxml_cons_labels = set()
 
         outmap_par = outmap[node.label]
 
@@ -117,9 +125,10 @@ def stitch_gen(options, suffix):
                         if j.label in astral_tree_cons_labels:
                             bb_removed.add(j.label)
                 astral_tree_par.root.remove_child(i)
-            if len(astral_tree_par.root.children) != 1:
+            if len(astral_tree_par.root.children) != 1 and len(uptree_labels) > 1:
                 raise ValueError('Astral tree is not binary.')
-            astral_tree_par.root = astral_tree_par.root.children[0]  # get rid of the degree 2 node
+            if len(astral_tree_par.root.children) == 1:
+                astral_tree_par.root = astral_tree_par.root.children[0]  # get rid of the degree 2 node
 
             if not outmap_par['ownsup']:  # delete some more if ownsup is false
                 kept_bb_and_child_repr = non_uptree.difference(bb_removed)
@@ -206,7 +215,6 @@ def stitch_gen(options, suffix):
                         removed.add(j.label + "\t" + node.label)
                 parent.remove_child(current)
                 parent.add_child(ctree.root)
-
         return astral_tree_par
 
     stitched_tree = _stitch(cg.root)
