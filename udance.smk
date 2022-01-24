@@ -132,11 +132,12 @@ rule refine_bb:
         method=config["infer_config"]["method"],
         c=config["refine_config"]["contract"],
         occup = config["refine_config"]["occupancy"]
-    resources: mem_mb=config["resources"]["large_memory"]
+    resources: cpus=config["resources"]["cores"],
+               mem_mb=config["resources"]["large_memory"]
     shell:
         '''
             (
-            python run_udance.py refine -p {outdir}/backbone/0 -m {params.method} -M {resources.mem_mb} -c {params.c} -o {params.occup}
+            python run_udance.py refine -p {outdir}/backbone/0 -m {params.method} -M {resources.mem_mb} -c {params.c} -o {params.occup} -T {resources.cpus}
             nw_reroot -d {outdir}/backbone/0/astral_output.incremental.nwk > {output}
             ) >> {udance_logpath} 2>&1
         '''
@@ -241,11 +242,12 @@ rule refine:
     params: method=config["infer_config"]["method"],
             c=config["refine_config"]["contract"],
             occup=config["refine_config"]["occupancy"]
-    resources: mem_mb=config["resources"]["large_memory"]
+    resources: cpus=config["resources"]["cores"],
+               mem_mb=config["resources"]["large_memory"]
     shell:
         """
             (
-            python run_udance.py refine -p {outdir}/udance/{wildcards.cluster} -m {params.method} -M {resources.mem_mb} -c {params.c} -o {params.occup}
+            python run_udance.py refine -p {outdir}/udance/{wildcards.cluster} -m {params.method} -M {resources.mem_mb} -c {params.c} -o {params.occup} -T {resources.cpus}
             ) >> {udance_logpath} 2>&1
         """
 

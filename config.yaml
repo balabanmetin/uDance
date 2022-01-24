@@ -44,7 +44,7 @@ infer_config:
 
 refine_config:
   # contract low support branches threshold. 0.9 for iqtree -abayes
-  contract: 0.9
+  contract: 0.33
   # gene occupancy threshold for inclusion
   occupancy: 5
 
