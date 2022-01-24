@@ -45,7 +45,7 @@ class PoolAstralWorker:
             with open(raxtree) as f:
                 treestr = f.readline()
             tf = ts.read_tree_newick(treestr)
-            lpps = [float(i.label) for i in tf.traverse_postorder(leaves=False) if i.label]
+            lpps = [float(i.label.replace("/","")) for i in tf.traverse_postorder(leaves=False) if i.label]
             if len(lpps) > 0:
                 median_map[gene] = median(lpps)
             # contract after computing the median
