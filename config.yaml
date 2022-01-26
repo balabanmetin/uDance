@@ -40,7 +40,7 @@ infer_config:
   # [raxml-ng,iqtree,raxml-8]
   method: "raxml-8"
   # number of starting trees
-  numstart: 1
+  numstart: 2
 
 refine_config:
   # contract low support branches threshold. 0.9 for iqtree -abayes
