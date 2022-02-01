@@ -174,10 +174,10 @@ rule placement:
         """
             (
             if [ "{params.char}" == "nuc" ]; then
-                run_apples.py -s {input.aln} -q {input.qry} -T {resources.cpus} \
+                run_apples.py --exclude -s {input.aln} -q {input.qry} -T {resources.cpus} \
                 -t {input.tre} -f {params.f} -m {params.m} -b {params.b} -o {output.j} > {log.out} 2> {log.err}
             else
-                run_apples.py -p -s {input.aln} -q {input.qry} -T {resources.cpus} \
+                run_apples.py --exclude -p -s {input.aln} -q {input.qry} -T {resources.cpus} \
                  -t {input.tre} -f {params.f} -m {params.m} -b {params.b} -o {output.j} > {log.out} 2> {log.err}
             fi
             ) >> {udance_logpath} 2>&1            

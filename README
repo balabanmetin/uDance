@@ -1,4 +1,4 @@
-uDance version 1.2.0
+uDance version 1.2.1
 
 AUTHORS:
 Metin Balaban
@@ -7,3 +7,9 @@ Yueyu Jiang
 PREREQUISITES:
 Unix/Linux
 Anaconda
+
+Changelog:
+
+1.2.1:
+-APPLES2 excludes sequences that are placed on internal nodes.
+-Filtered backbone sequences are no longer added to the query set.

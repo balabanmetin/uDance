@@ -60,14 +60,15 @@ bash uDance/filter_backbone.sh $OUTDIR/placement/backbone.fa $OUTDIR/placement/b
 # useless cat
 NUMFILT=`cat $OUTDIR/placement/filtered.txt | wc -l`
 
-printf "%d low quality sequences are removed from the backbone.\n" $NUMFILT >&2
+printf "%d low quality sequences are removed from the backbone. The sequences will not be present in the final tree.\n" $NUMFILT >&2
 
 if [[ "$NUMFILT" -gt 0 ]]; then
   seqkit grep -vf $OUTDIR/placement/filtered.txt $OUTDIR/placement/backbone.fa -w 0 --quiet -o $TDR/backbone.fa
-  seqkit grep -f $OUTDIR/placement/filtered.txt $OUTDIR/placement/backbone.fa -w 0 --quiet -o $TDR/query.fa
+  # seqkit grep -f $OUTDIR/placement/filtered.txt $OUTDIR/placement/backbone.fa -w 0 --quiet -o $TDR/query.fa
 
   mv $TDR/backbone.fa $OUTDIR/placement/backbone.fa
-  cat $TDR/query.fa >> $OUTDIR/placement/query.fa
+  #cat $TDR/query.fa >> $OUTDIR/placement/query.fa
+  cat $TDR/query.fa > $OUTDIR/placement/query.fa
 
   nw_prune $OUTDIR/placement/backbone.tree `cat $OUTDIR/placement/filtered.txt` > $TDR/backbone.tree
   mv $TDR/backbone.tree $OUTDIR/placement/backbone.tree
