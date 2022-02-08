@@ -45,10 +45,7 @@ rule trimtaper:
     shell:
         """
             (
-            TFA=`mktemp -t XXXXXX.fa`
-            trimal -in {input} -out $TFA -gt {params.thr} 
-            julia uDance/correction_multi.jl $TFA > {output}
-            rm $TFA
+            uDance/trimtaper.sh {input} {params.thr} {output}
             ) >> {udance_logpath} 2>&1
         """
 
