@@ -12,9 +12,12 @@ BBONE=$2
 OUTDIR=$3
 CHARTYPE=$4
 NUMTHREADS=$5
+APF=$6
+APM=$7
+APB=$8
 
 
-TDR=`mktemp -d placementruleXXXXXX`
+TDR=`mktemp -dt placementruleXXXXXX`
 
 cat $ALNDIR/* | grep ">" | sed "s/>//g" | sort -u > $TDR/alltaxa.txt
 touch $TDR/alnpaths.txt
@@ -55,7 +58,7 @@ python -c "import treeswift as ts; t=ts.read_tree_newick(\"$TDR/backbone.tree\")
 # $4 number of threads
 # $5 all alignments dir
 bash uDance/filter_backbone.sh $OUTDIR/placement/backbone.fa $OUTDIR/placement/backbone.tree \
-      $CHARTYPE $NUMTHREADS $ALNDIR 2> $OUTDIR/placement/filtering.log > $OUTDIR/placement/filtered.txt
+      $CHARTYPE $NUMTHREADS $ALNDIR $APF $APM $APB 2> $OUTDIR/placement/filtering.log > $OUTDIR/placement/filtered.txt
 
 # useless cat
 NUMFILT=`cat $OUTDIR/placement/filtered.txt | wc -l`
@@ -64,14 +67,15 @@ printf "%d low quality sequences are removed from the backbone. The sequences wi
 
 if [[ "$NUMFILT" -gt 0 ]]; then
   seqkit grep -vf $OUTDIR/placement/filtered.txt $OUTDIR/placement/backbone.fa -w 0 --quiet -o $TDR/backbone.fa
+  cp $OUTDIR/placement/backbone.fa $OUTDIR/placement/backbone.fa.bak
   # seqkit grep -f $OUTDIR/placement/filtered.txt $OUTDIR/placement/backbone.fa -w 0 --quiet -o $TDR/query.fa
 
   mv $TDR/backbone.fa $OUTDIR/placement/backbone.fa
   #cat $TDR/query.fa >> $OUTDIR/placement/query.fa
-  cat $TDR/query.fa > $OUTDIR/placement/query.fa
+  #cat $TDR/query.fa > $OUTDIR/placement/query.fa
 
   nw_prune $OUTDIR/placement/backbone.tree `cat $OUTDIR/placement/filtered.txt` > $TDR/backbone.tree
   mv $TDR/backbone.tree $OUTDIR/placement/backbone.tree
 fi
 
-rm -r $TDR
+#rm -r $TDR

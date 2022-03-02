@@ -145,13 +145,16 @@ rule placement_prep:
     output: aln = os.path.join(outdir,"placement/backbone.fa"),
             qry = os.path.join(outdir,"placement/query.fa"),
             tre = os.path.join(outdir,"placement/backbone.tree")
-    params: char=config["chartype"]
+    params: char=config["chartype"],
+            f=config["apples_config"]["filter"],
+            m=config["apples_config"]["method"],
+            b=config["apples_config"]["base"]
     resources: cpus=config["resources"]["cores"],
                mem_mb=config["resources"]["large_memory"]
     shell:
         """
             (
-            bash uDance/create_concat_alignment.sh {input.ind} {input.b} {outdir} {params.char} {resources.cpus}
+            bash uDance/create_concat_alignment.sh {input.ind} {input.b} {outdir} {params.char} {resources.cpus} {params.f} {params.m} {params.b}
             ) >> {udance_logpath} 2>&1            
         """
 
