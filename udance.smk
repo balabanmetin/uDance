@@ -173,6 +173,9 @@ rule placement:
     shell:
         """
             (
+            export MKL_NUM_THREADS=1
+            export NUMEXPR_NUM_THREADS=1
+            export OMP_NUM_THREADS=1
             if [ "{params.char}" == "nuc" ]; then
                 run_apples.py --exclude -s {input.aln} -q {input.qry} -T {resources.cpus} \
                 -t {input.tre} -f {params.f} -m {params.m} -b {params.b} -o {output.j} > {log.out} 2> {log.err}
