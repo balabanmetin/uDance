@@ -25,6 +25,8 @@ apples_config:
   filter: 0.2
   # integer. (5-infinity)
   base: 25
+  # minimum overlap fraction. Default  is 0.001
+  overlap: 0.05
 
 prep_config:
   # cluster must have a minimum diameter

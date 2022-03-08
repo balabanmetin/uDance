@@ -12,7 +12,7 @@ else
         trimal=1.4.1
         source activate udance
         conda activate udance
-        pip install apples==2.0.7 kmeans1d==0.3.1
+        pip install apples==2.0.9 kmeans1d==0.3.1
 
         # julia needs to download packages during the first run. Let's do it now while we are online :)
         julia $SCRIPTS_DIR/uDance/correction_multi.jl datasmall/alignments/p0309.fasta > /dev/null

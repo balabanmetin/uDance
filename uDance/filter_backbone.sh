@@ -14,6 +14,7 @@ export ALLALNS=$5
 export APF=$6
 export APM=$7
 export APB=$8
+export APV=$9
 
 export SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 
@@ -40,9 +41,9 @@ onequery() {
   nw_prune $MNTMP/backbone_me.tree $QUERY >$TMP/backbone.nwk
   seqkit grep -f <(echo $QUERY) -w 0 --quiet $ALN >$TMP/query.fa
   if [ "$CHARTYPE" == "nuc" ]; then
-    run_apples.py -a $MNTMP/apples.dtb -t $TMP/backbone.nwk -q $TMP/query.fa -f $APF -m $APM -b $APB -D -o $TMP/apples.jplace -T 1
+    run_apples.py -a $MNTMP/apples.dtb -t $TMP/backbone.nwk -q $TMP/query.fa -f $APF -m $APM -b $APB -V $APV -D -o $TMP/apples.jplace -T 1
   else
-    run_apples.py -p -a $MNTMP/apples.dtb -t $TMP/backbone.nwk -q $TMP/query.fa -f $APF -m $APM -b $APB -D -o $TMP/apples.jplace -T 1
+    run_apples.py -p -a $MNTMP/apples.dtb -t $TMP/backbone.nwk -q $TMP/query.fa -f $APF -m $APM -b $APB -V $APV -D -o $TMP/apples.jplace -T 1
   fi
   gappa examine graft --jplace-path=$TMP/apples.jplace --out-dir=$TMP >/dev/null 2>/dev/null
   n1=$($SCRIPTS_DIR/tools/compareTrees.missingBranch $MNTMP/backbone_me.tree $TMP/apples.newick | awk '{printf $2}')
@@ -77,9 +78,9 @@ if [ "$NUMRMFIRST" -gt 0 ] ; then
   while read sp; do
     seqkit grep -f <(echo $sp) -w 0 --quiet $ALN >$MNTMP/query_secondstage.fa
     if [ "$CHARTYPE" == "nuc" ]; then
-      run_apples.py -a $MNTMP/apples_secondstage.dtb -q $MNTMP/query_secondstage.fa -f $APF -m $APM -b $APB -o $MNTMP/apples.jplace -T 1
+      run_apples.py -a $MNTMP/apples_secondstage.dtb -q $MNTMP/query_secondstage.fa -f $APF -m $APM -b $APB -V $APV -o $MNTMP/apples.jplace -T 1
     else
-      run_apples.py -p -a $MNTMP/apples_secondstage.dtb -q $MNTMP/query_secondstage.fa -f $APF -m $APM -b $APB -o $MNTMP/apples.jplace -T 1
+      run_apples.py -p -a $MNTMP/apples_secondstage.dtb -q $MNTMP/query_secondstage.fa -f $APF -m $APM -b $APB -V $APV -o $MNTMP/apples.jplace -T 1
     fi
     gappa examine graft --jplace-path=$MNTMP/apples.jplace --out-dir=$MNTMP --allow-file-overwriting >/dev/null 2>/dev/null
     n1=$($SCRIPTS_DIR/tools/compareTrees.missingBranch $MNTMP/backbone_me.tree $MNTMP/apples.newick -simplify | awk '{printf $2}')

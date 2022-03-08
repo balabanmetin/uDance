@@ -148,13 +148,14 @@ rule placement_prep:
     params: char=config["chartype"],
             f=config["apples_config"]["filter"],
             m=config["apples_config"]["method"],
-            b=config["apples_config"]["base"]
+            b=config["apples_config"]["base"],
+            v=config["apples_config"]["overlap"]
     resources: cpus=config["resources"]["cores"],
                mem_mb=config["resources"]["large_memory"]
     shell:
         """
             (
-            bash uDance/create_concat_alignment.sh {input.ind} {input.b} {outdir} {params.char} {resources.cpus} {params.f} {params.m} {params.b}
+            bash uDance/create_concat_alignment.sh {input.ind} {input.b} {outdir} {params.char} {resources.cpus} {params.f} {params.m} {params.b} {params.v}
             ) >> {udance_logpath} 2>&1            
         """
 
@@ -166,6 +167,7 @@ rule placement:
     params: f=config["apples_config"]["filter"],
             m=config["apples_config"]["method"],
             b=config["apples_config"]["base"],
+            v=config["apples_config"]["overlap"],
             char=config["chartype"]
     resources: cpus=config["resources"]["cores"],
                mem_mb=config["resources"]["large_memory"]
@@ -177,10 +179,10 @@ rule placement:
             export NUMEXPR_NUM_THREADS=1
             export OMP_NUM_THREADS=1
             if [ "{params.char}" == "nuc" ]; then
-                run_apples.py --exclude -s {input.aln} -q {input.qry} -T {resources.cpus} \
+                run_apples.py --exclude -s {input.aln} -q {input.qry} -T {resources.cpus} -V {params.v} \
                 -t {input.tre} -f {params.f} -m {params.m} -b {params.b} -o {output.j} > {log.out} 2> {log.err}
             else
-                run_apples.py --exclude -p -s {input.aln} -q {input.qry} -T {resources.cpus} \
+                run_apples.py --exclude -p -s {input.aln} -q {input.qry} -T {resources.cpus} -V {params.v} \
                  -t {input.tre} -f {params.f} -m {params.m} -b {params.b} -o {output.j} > {log.out} 2> {log.err}
             fi
             ) >> {udance_logpath} 2>&1            
