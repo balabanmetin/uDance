@@ -210,6 +210,13 @@ checkpoint decompose:
             else
                 python run_udance.py decompose -p -s {input.ind} -o {outdir}/udance -t {params.size} -j {input.j} -m {params.method} -T {resources.cpus} -l {params.sub} -f {params.frag}
             fi
+            python prune_similar.py -T {resources.cpus} -o {outdir}/udance
+            if [  -f {outdir}/udance/dedupe_map.txt ]; then 
+                cat {outdir}/udance/dedupe_map.txt > {outdir}/dedupe_map.txt 
+            fi 
+            if [ -f {outdir}/rm_map.txt ]; then 
+                cat {outdir}/rm_map.txt >> {outdir}/dedupe_map.txt 
+            fi
             ) >> {udance_logpath} 2>&1
         """
 

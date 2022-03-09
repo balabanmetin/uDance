@@ -1,7 +1,8 @@
 import json
 from multiprocessing import cpu_count
 from optparse import OptionParser
-from os.path import join
+from os.path import join, isfile
+import shutil
 
 from uDance.subsample_partition import subsample_partition
 
@@ -14,9 +15,9 @@ if __name__ == '__main__':
     parser.add_option("-T", "--threads", type=int, dest="num_thread", default=0,
                       help="number of cores used in placement. "
                            "0 to use all cores in the running machine", metavar="NUMBER")
-    parser.add_option("-c", "--cutoff", type=float, dest="cutoff_threshold", metavar='NUMBER', default=0.99,
+    parser.add_option("-c", "--cutoff", type=float, dest="cutoff_threshold", metavar='NUMBER', default=0.95,
                       help="threshold number of dissimilar genes.")
-    parser.add_option("-S", "--size", type=int, dest="minimum_size", metavar='NUMBER', default=600,
+    parser.add_option("-S", "--size", type=int, dest="minimum_size", metavar='NUMBER', default=8000,
                       help="partition size requirement for pruning.")
 
     (options, args) = parser.parse_args()
@@ -27,6 +28,7 @@ if __name__ == '__main__':
     with open(outmap) as o:
         j = json.load(o)
     partition_dirs = [x for x in j.keys() if int(x) >= 0]
+    dupmapstrs = []
     for i in partition_dirs:
         partition_output_dir = join(options.output_fp, str(i))
         with open(join(partition_output_dir, "species.txt")) as f:
@@ -34,4 +36,17 @@ if __name__ == '__main__':
             numspecies = len(species)
             if numspecies < options.minimum_size:
                 continue
-        subsample_partition(partition_output_dir, options.cutoff_threshold)
+        print(numspecies)
+        res = subsample_partition(partition_output_dir, options.cutoff_threshold)
+        if res:
+            dupmapstrs.append(res)
+
+    # if isfile(join(options.output_fp, "rm_map.txt")):
+    #     shutil.copyfile(join(options.output_fp, "rm_map.txt"), join(options.output_fp, "dedupe_map.txt"))
+    if len(dupmapstrs) > 0:
+        with open(join(options.output_fp, "dedupe_map.txt"), "a") as f:
+            for st in dupmapstrs:
+                f.write(st)
+
+
+
