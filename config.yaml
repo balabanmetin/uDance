@@ -21,9 +21,9 @@ mainlines_config:
 apples_config:
   # [FM, OLS]
   method: FM
-  # float. (0-infinity)
+  # float. [0-infinity)
   filter: 0.2
-  # integer. (5-infinity)
+  # integer. [5-infinity)
   base: 25
   # minimum overlap fraction. Default  is 0.001
   overlap: 0.05
@@ -37,6 +37,10 @@ prep_config:
   sublength: 100
   # minimum fragment length
   fraglength: 75
+  # large clusters are pruned. ASTRAL's limit is around 9000 for 400+ genes.
+  pruneafter: 9000
+  # [0-1]. lower threshold = stricter pruning
+  prune_thr: 0.96
 
 infer_config:
   # [raxml-ng,iqtree,raxml-8]

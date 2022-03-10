@@ -15,9 +15,9 @@ if __name__ == '__main__':
     parser.add_option("-T", "--threads", type=int, dest="num_thread", default=0,
                       help="number of cores used in placement. "
                            "0 to use all cores in the running machine", metavar="NUMBER")
-    parser.add_option("-c", "--cutoff", type=float, dest="cutoff_threshold", metavar='NUMBER', default=0.95,
+    parser.add_option("-c", "--cutoff", type=float, dest="cutoff_threshold", metavar='NUMBER', default=0.96,
                       help="threshold number of dissimilar genes.")
-    parser.add_option("-S", "--size", type=int, dest="minimum_size", metavar='NUMBER', default=8000,
+    parser.add_option("-S", "--size", type=int, dest="minimum_size", metavar='NUMBER', default=9000,
                       help="partition size requirement for pruning.")
 
     (options, args) = parser.parse_args()

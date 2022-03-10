@@ -95,6 +95,13 @@ def subsample_partition(partition_output_dir, cutoff):
         return ""
     pruned_species = set(pruned_species)
 
+    # remove pruned from species.txt
+    with open(join(partition_output_dir, "species.txt")) as f:
+        prevspecies = set(map(lambda x: x.strip(), f.readlines()))
+    newspecieslst = list(prevspecies.difference(pruned_species))
+    with open(join(partition_output_dir, "species.txt"), "w") as f:
+        f.write("\n".join(pruned_species) + "\n")
+
     for g in genes:
         aln_dict = dict()
         with open(join(g, "aln.fa")) as af:
@@ -131,12 +138,12 @@ def subsample_partition(partition_output_dir, cutoff):
                 if len(v) > 1:
                     duplist.append("\t".join(v))
 
-            aln_output_path = join(g, "aln_pruned.fa")
+            aln_output_path = join(g, "aln.fa")
             with open(aln_output_path, "w", buffering=100000000) as f:
                 f.write("\n".join(res))
                 f.write("\n")
             if duplist:
-                dupmap_output_path = join(g, "dupmap_pruned.txt")
+                dupmap_output_path = join(g, "dupmap.txt")
                 with open(dupmap_output_path, "w", buffering=100000000) as f:
                     f.write("\n".join(duplist))
                     f.write("\n")
