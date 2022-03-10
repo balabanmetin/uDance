@@ -100,7 +100,7 @@ def subsample_partition(partition_output_dir, cutoff):
         prevspecies = set(map(lambda x: x.strip(), f.readlines()))
     newspecieslst = list(prevspecies.difference(pruned_species))
     with open(join(partition_output_dir, "species.txt"), "w") as f:
-        f.write("\n".join(pruned_species) + "\n")
+        f.write("\n".join(newspecieslst) + "\n")
 
     for g in genes:
         aln_dict = dict()
