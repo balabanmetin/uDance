@@ -8,7 +8,7 @@ import time
 import treeswift as ts
 
 
-def subsample_partition(partition_output_dir, cutoff):
+def subsample_partition(partition_output_dir, limit):
     with open(join(partition_output_dir, "species.txt")) as f:
         species = set(map(lambda x: x.strip(), f.readlines()))
     t = ts.read_tree_newick(join(partition_output_dir, "astral_constraint.nwk"))
@@ -65,11 +65,25 @@ def subsample_partition(partition_output_dir, cutoff):
     x = counts_ij / np.minimum(counts_i[..., np.newaxis], counts_i[np.newaxis, ...])
     x.dump(join(partition_output_dir, "adj_mat.pkl"), protocol=4)
     #print(x)
-    y = (x >= cutoff)
-    print("redo %.3f." % (time.time() - start))
-    start = time.time()
-    n, components = connected_components(y)
-    print(n, components)
+
+    clow = 1
+    chigh = 100
+
+    while chigh > clow or chigh == 2:
+        cutoff = (chigh + clow + 1)//2
+        print(clow, cutoff, chigh)
+        y = (x >= (cutoff/100))
+        n, components = connected_components(y)
+        if limit < n:
+            chigh = cutoff-1
+        elif limit > n:
+            clow = cutoff
+        else:
+            clow = cutoff
+            chigh = cutoff # making sure clow=chigh always holds at the exit. we will print that.
+            break
+
+    print("Partition " + partition_output_dir + " is pruned to %d taxa at the automatic cutoff %f." % (n, clow/100))
 
     print("components %.3f." % (time.time() - start))
 

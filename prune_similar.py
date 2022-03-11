@@ -1,8 +1,7 @@
 import json
 from multiprocessing import cpu_count
 from optparse import OptionParser
-from os.path import join, isfile
-import shutil
+from os.path import join
 
 from uDance.subsample_partition import subsample_partition
 
@@ -15,8 +14,6 @@ if __name__ == '__main__':
     parser.add_option("-T", "--threads", type=int, dest="num_thread", default=0,
                       help="number of cores used in placement. "
                            "0 to use all cores in the running machine", metavar="NUMBER")
-    parser.add_option("-c", "--cutoff", type=float, dest="cutoff_threshold", metavar='NUMBER', default=0.96,
-                      help="threshold number of dissimilar genes.")
     parser.add_option("-S", "--size", type=int, dest="minimum_size", metavar='NUMBER', default=9000,
                       help="partition size requirement for pruning.")
 
@@ -37,12 +34,10 @@ if __name__ == '__main__':
             if numspecies < options.minimum_size:
                 continue
         print(numspecies)
-        res = subsample_partition(partition_output_dir, options.cutoff_threshold)
+        res = subsample_partition(partition_output_dir, options.minimum_size)
         if res:
             dupmapstrs.append(res)
 
-    # if isfile(join(options.output_fp, "rm_map.txt")):
-    #     shutil.copyfile(join(options.output_fp, "rm_map.txt"), join(options.output_fp, "dedupe_map.txt"))
     if len(dupmapstrs) > 0:
         with open(join(options.output_fp, "dedupe_map.txt"), "a") as f:
             for st in dupmapstrs:

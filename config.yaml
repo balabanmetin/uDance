@@ -39,8 +39,6 @@ prep_config:
   fraglength: 75
   # large clusters are pruned. ASTRAL's limit is around 9000 for 400+ genes.
   pruneafter: 9000
-  # [0-1]. lower threshold = stricter pruning
-  prune_thr: 0.96
 
 infer_config:
   # [raxml-ng,iqtree,raxml-8]

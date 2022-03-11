@@ -198,7 +198,6 @@ checkpoint decompose:
         sub=config["prep_config"]["sublength"],
         frag=config["prep_config"]["fraglength"],
         pra=config["prep_config"]["pruneafter"],
-        prt=config["prep_config"]["prune_thr"],
         char=config["chartype"]
 
     resources: cpus=config["resources"]["cores"],
@@ -212,7 +211,7 @@ checkpoint decompose:
             else
                 python run_udance.py decompose -p -s {input.ind} -o {outdir}/udance -t {params.size} -j {input.j} -m {params.method} -T {resources.cpus} -l {params.sub} -f {params.frag}
             fi
-            python prune_similar.py -T {resources.cpus} -o {outdir}/udance -S {params.pra} -c {params.prt}
+            python prune_similar.py -T {resources.cpus} -o {outdir}/udance -S {params.pra}
             if [  -f {outdir}/udance/dedupe_map.txt ]; then 
                 cat {outdir}/udance/dedupe_map.txt > {outdir}/dedupe_map.txt 
             fi 

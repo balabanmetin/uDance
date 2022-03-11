@@ -1,4 +1,4 @@
-uDance version 1.3.0
+uDance version 1.3.1
 
 AUTHORS:
 Metin Balaban
@@ -9,6 +9,8 @@ Unix/Linux
 Anaconda
 
 Changelog:
+1.3.1:
+-Getting rid of pruning thresholds (automated finding)
 
 1.3.0:
 -Pruning Large partitions
