@@ -6,12 +6,13 @@ set -euo pipefail
 # $2 protein or nucleotide
 # $3 number of starting trees
 # $4 method raxml-8, or raxml-ng, TODO or iqtree
-# TODO, $5numthreads. currently fixed to 1
+# $5 numthreads
 
 export ALN=$(basename $1)
 export CHARTYPE=$2
 export STARTS=$3
 export ITOOL=$4
+export NUMTHREADS=$5
 
 SHMT=`mktemp -dt processmarkerXXXXXX`
 cp $1 $SHMT/$ALN
@@ -82,10 +83,10 @@ run_a_start(){
   pushd $TREEID > /dev/null
     ln -s ../shrunk.fasta
     if [[ "$ITOOL" == "raxml-ng" ]] ; then
-      if raxml-ng --msa shrunk.fasta --tree pars{1} --model ${NGMODEL} --threads 1 --seed $TREEID --prefix RUN --lh-epsilon 0.5 > raxml-ng.log 2>&1; then
+      if raxml-ng --msa shrunk.fasta --tree pars{1} --model ${NGMODEL} --threads $NUMTHREADS --seed $TREEID --prefix RUN --lh-epsilon 0.5 > raxml-ng.log 2>&1; then
         nw_topology -bI RUN.raxml.bestTree | nw_order - > RAxML_result.RUN
         grep "Final" RUN.raxml.log | cut -f3 -d ' ' > likelihood.txt
-        iqtree -ntmax 1 -abayes -m ${IQMODEL} -s shrunk.fasta -te RAxML_result.RUN -seed $TREEID --redo > iqtree.out 2> iqtree.err
+        iqtree -ntmax $NUMTHREADS -abayes -m ${IQMODEL} -s shrunk.fasta -te RAxML_result.RUN -seed $TREEID --redo > iqtree.out 2> iqtree.err
       else
         grep "ERROR" raxml-ng.log >&2
         echo "WARNING: RAxML-NG failed to infer a tree using $ALN. Continuing using RAxML-8" >&2
@@ -95,12 +96,13 @@ run_a_start(){
     fi
     if [[ "$ITOOL" == "raxml-8" ]] ; then
       # start with iqtree -fast tree
-      iqtree -ntmax 1 -fast -m ${IQMODEL} -s shrunk.fasta -seed $TREEID --prefix START> iqtree_start.out 2> iqtree_start.err
+      iqtree -ntmax $NUMTHREADS -fast -m ${IQMODEL} -s shrunk.fasta -seed $TREEID --prefix START> iqtree_start.out 2> iqtree_start.err
       #fasttree -nopr $FASTMODEL -gamma -seed $TREEID -log fasttree_r2.log < ../shrunk.fasta  > fasttree_r2.nwk 2> fasttree_r2.err
       #python -c "import treeswift as ts; t=ts.read_tree_newick(\"fasttree_r2.nwk\"); \
       #      [c.resolve_polytomies() for c in t.root.children]; print(t)" > fasttree_r2_resolved.nwk
+      # TODO raxml8 multithreading
       raxmlHPC -T 1 -m ${RAXMODEL} -F -f D -D -s shrunk.fasta -p $TREEID -n RUN -t START.treefile > raxml-8.log 2>&1
-      iqtree -ntmax 1 -abayes -m ${IQMODEL} -s shrunk.fasta -te RAxML_result.RUN -seed $TREEID --redo > iqtree.out 2> iqtree.err
+      iqtree -ntmax $NUMTHREADS -abayes -m ${IQMODEL} -s shrunk.fasta -te RAxML_result.RUN -seed $TREEID --redo > iqtree.out 2> iqtree.err
       grep "BEST SCORE" shrunk.fasta.log | cut -f5 -d ' ' > likelihood.txt
     fi
     #if raxmlHPC -T 1 -m ${RAXMODEL}GAMMA -f e -s ../shrunk.fasta -t RAxML_result.RUN -n RUNGAMMA -p 12345 2> raxml_gamma.err > raxml_gamma.log ;

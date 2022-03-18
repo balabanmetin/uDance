@@ -45,6 +45,8 @@ infer_config:
   method: "raxml-8"
   # number of starting trees
   numstart: 2
+  # threads per core
+  numthread: 1
 
 refine_config:
   # contract low support branches threshold. 0.9 for iqtree -abayes

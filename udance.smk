@@ -230,6 +230,7 @@ rule genetreeinfer:
     params:
           c=config["chartype"],
           s=config["infer_config"]["numstart"],
+          thrd=config["infer_config"]["numthread"],
           t=config["infer_config"]["method"]
     shell:
         '''
@@ -237,8 +238,8 @@ rule genetreeinfer:
             # before appending to udance_logpath
             source uDance/mysponge.sh
             (
-            bash uDance/process_a_marker.sh {input} {params.c} {params.s} {params.t}
-            ) 2>&1 | mysponge >> {udance_logpath} 
+            bash uDance/process_a_marker.sh {input} {params.c} {params.s} {params.t} {params.thrd}
+            ) 2>&1 | mysponge #>> {udance_logpath} 
         '''
 
 
