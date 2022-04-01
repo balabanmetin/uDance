@@ -49,7 +49,7 @@ mapfile -t < $TDR/backbone_id_dedup.txt
 # backbone tree with duplicates removed. This tree might potentially have polytomies.
 # Polytomies need to be resolved as its required for APPLES-2 (FastTree).
 # TODO resolution using raxml
-nw_prune -v $BBONE "${MAPFILE[@]}" > $TDR/backbone.tree
+nw_prune -v <(nw_topology -bI $BBONE) "${MAPFILE[@]}" > $TDR/backbone.tree
 python -c "import treeswift as ts; t=ts.read_tree_newick(\"$TDR/backbone.tree\"); \
           [c.resolve_polytomies() for c in t.root.children]; print(t)" > $OUTDIR/placement/backbone.tree
 
