@@ -6,6 +6,7 @@ wdr = config["workdir"]
 outdir = os.path.join(wdr, "output")
 alndir = os.path.join(wdr, "alignments")
 bbspec = os.path.join(wdr, "species.txt")
+input_bbone = os.path.join(wdr, "backbone.nwk")
 bbone = os.path.join(outdir, "backbone.nwk")
 trimalndir = os.path.join(outdir, "trimmed")
 
@@ -14,7 +15,7 @@ TRIMMEDGENES = [os.path.join(outdir, "trimdump", f) for f in os.listdir(alndir) 
 
 udance_logpath = os.path.abspath(os.path.join(wdr, "udance.log"))
 
-localrules: all, clean, copyspeciesfile, trimcollect
+localrules: all, clean, trimcollect, copybb
 
 rule all:
     input: expand("%s/udance.{approach}.nwk" % outdir, approach=["incremental", "updates"])
@@ -61,16 +62,21 @@ rule trimcollect:
 
 rule mainlines:
     input: trimalndir
-    output: bbspec
+    output: os.path.join(outdir, "backbone/0/species.txt")
     params:
             n=config["mainlines_config"]["n"],
             l=config["mainlines_config"]["length"],
-            char=config["chartype"]
+            char=config["chartype"],
+            bck=config["backbone"]
     resources: mem_mb=config["resources"]["large_memory"]
     shell:
         """
             (
-            if [ "{params.char}" == "nuc" ]; then
+            if [ "{params.bck}" == "list" ]; then
+                cp {bbspec} {output}
+            elif [ "{params.bck}" == "tree" ]; then
+                nw_labels -I {input_bbone} > {output}
+            elif [ "{params.char}" == "nuc" ]; then  # denovo
                 python run_udance.py mainlines -s {input} -n {params.n} -l {params.l} > {output}
             else
                 python run_udance.py mainlines -s {input} -n {params.n} -l {params.l} -p > {output}
@@ -78,15 +84,6 @@ rule mainlines:
             ) >> {udance_logpath} 2>&1
         """
 
-rule copyspeciesfile:
-    input: s=bbspec
-    output: os.path.join(outdir, "backbone/0/species.txt")
-    shell:
-        """
-            (
-            cp {input} {output}
-            ) >> {udance_logpath} 2>&1
-        """
 checkpoint prepbackbonegenes:
     input: s=os.path.join(outdir, "backbone/0/species.txt"), a=trimalndir
     output: touch(os.path.join(outdir,"backbone/0/done.txt"))
@@ -94,21 +91,26 @@ checkpoint prepbackbonegenes:
                mem_mb=config["resources"]["large_memory"]
     params: sub=config["prep_config"]["sublength"],
             frag=config["prep_config"]["fraglength"],
-            char=config["chartype"]
+            char=config["chartype"],
+            bck=config["backbone"]
     shell:
          # python calling shell calling python. looks terrible but
          # this way we are avoiding forking in snakemake main process
         '''
             (
-            python -c  "import multiprocessing as mp; \
-                        mp.set_start_method('fork'); \
-                        from uDance.prep_partition_alignments import prep_partition_alignments; \
-                        prep_partition_alignments('{input.a}', \
-                                      '{params.char}' == 'prot', \
-                                      ['{input.s}'], \
-                                      {resources.cpus}, \
-                                      {params.sub}, \
-                                      {params.frag})"
+            if [ "{params.bck}" == "tree" ]; then
+                touch {outdir}/backbone/0/done.txt
+            else
+                python -c  "import multiprocessing as mp; \
+                            mp.set_start_method('fork'); \
+                            from uDance.prep_partition_alignments import prep_partition_alignments; \
+                            prep_partition_alignments('{input.a}', \
+                                          '{params.char}' == 'prot', \
+                                          ['{input.s}'], \
+                                          {resources.cpus}, \
+                                          {params.sub}, \
+                                          {params.frag})"
+            fi
             ) >> {udance_logpath} 2>&1
         '''
         # with open(params.logpath, "a") as log_file:
@@ -121,23 +123,31 @@ def aggregate_refine_bb_input(wildcards):
     wc = glob_wildcards(os.path.join(checkpoint_output, "{j}/aln.fa"))
     return ["%s/backbone/0/%s/bestTree.nwk" % (outdir,j) for j in wc.j]
 
-
-rule refine_bb:
-    input: aggregate_refine_bb_input
-    output: bbone = bbone
-    params:
-        method=config["infer_config"]["method"],
-        c=config["refine_config"]["contract"],
-        occup = config["refine_config"]["occupancy"]
-    resources: cpus=config["resources"]["cores"],
-               mem_mb=config["resources"]["large_memory"]
-    shell:
-        '''
-            (
-            python run_udance.py refine -p {outdir}/backbone/0 -m {params.method} -M {resources.mem_mb} -c {params.c} -o {params.occup} -T {resources.cpus}
-            nw_reroot -d {outdir}/backbone/0/astral_output.incremental.nwk > {output}
-            ) >> {udance_logpath} 2>&1
-        '''
+if config["backbone"] != "tree":
+    rule refine_bb:
+        input: aggregate_refine_bb_input
+        output: bbone = bbone
+        params:
+            method=config["infer_config"]["method"],
+            c=config["refine_config"]["contract"],
+            occup = config["refine_config"]["occupancy"]
+        resources: cpus=config["resources"]["cores"],
+                   mem_mb=config["resources"]["large_memory"]
+        shell:
+            '''
+                (
+                python run_udance.py refine -p {outdir}/backbone/0 -m {params.method} -M {resources.mem_mb} -c {params.c} -o {params.occup} -T {resources.cpus}
+                nw_reroot -d {outdir}/backbone/0/astral_output.incremental.nwk > {output}
+                ) >> {udance_logpath} 2>&1
+            '''
+else:
+    rule copybb:
+        input: os.path.join(outdir,"backbone/0/done.txt")
+        output: bbone = bbone
+        shell:
+            '''
+                cp {input_bbone} {output.bbone}
+            '''
 
 rule placement_prep:
     input: b = bbone,
