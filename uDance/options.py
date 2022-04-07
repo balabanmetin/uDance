@@ -109,6 +109,12 @@ def options_config():
     parser_ref.add_argument("-c", "--contract", type=float, dest="contract_threshold", default=0.9,
                             help="contract branches with support less than given threshold"
                                  "in the inferred gene trees", metavar="NUMBER")
+    parser_ref.add_argument("-l", "--outlier-size", type=float, dest="outlier_sizelimit", default=0.2,
+                            help="one of the two gene tree filtering parameters. This parameter"
+                                 "determines the maximum size of the outlier set chosen by 1D k-means of median lpps.", metavar="NUMBER")
+    parser_ref.add_argument("-d", "--centroid-difference", type=float, dest="centroid_difference", default=0.1,
+                            help="one of the two gene tree filtering parameter. This parameter"
+                                 "determines 1D k-means centroid difference that triggers outlier detection.", metavar="NUMBER")
     parser_ref.add_argument("-o", "--occupancy", type=int, dest="occupancy_threshold", default=1,
                                   help="gene occupancy threshold for inclusion in ASTRAL step."
                                        , metavar="NUMBER")

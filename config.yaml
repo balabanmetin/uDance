@@ -61,5 +61,12 @@ refine_config:
   contract: 0.33
   # gene occupancy threshold for inclusion
   occupancy: 5
+  # 1D k-means-based (k=2) outlier gene detection parameter. Limit for outlier size fraction.
+  # Larger clusters cannot be designated as outliers
+  outlier_sizelimit: 0.2  
+  # 1D k-means-based (k=2) outlier gene detection parameter. Centroid difference must be 
+  # larger than this value to designate the first cluster as outliers.
+  outlier_difference: 0.1
+
 
 

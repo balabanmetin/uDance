@@ -130,13 +130,15 @@ if config["backbone"] != "tree":
         params:
             method=config["infer_config"]["method"],
             c=config["refine_config"]["contract"],
-            occup = config["refine_config"]["occupancy"]
+            occup = config["refine_config"]["occupancy"],
+            ol=config["refine_config"]["outlier_sizelimit"],
+            od=config["refine_config"]["outlier_difference"]
         resources: cpus=config["resources"]["cores"],
                    mem_mb=config["resources"]["large_memory"]
         shell:
             '''
                 (
-                python run_udance.py refine -p {outdir}/backbone/0 -m {params.method} -M {resources.mem_mb} -c {params.c} -o {params.occup} -T {resources.cpus}
+                python run_udance.py refine -p {outdir}/backbone/0 -m {params.method} -M {resources.mem_mb} -c {params.c} -o {params.occup} -T {resources.cpus} -l {params.ol} -d {params.od}
                 nw_reroot -d {outdir}/backbone/0/astral_output.incremental.nwk > {output}
                 ) >> {udance_logpath} 2>&1
             '''
@@ -265,13 +267,15 @@ rule refine:
     output: expand("%s/udance/{{cluster}}/astral_output.{approach}.nwk" % outdir, approach=["incremental", "updates"])
     params: method=config["infer_config"]["method"],
             c=config["refine_config"]["contract"],
-            occup=config["refine_config"]["occupancy"]
+            occup=config["refine_config"]["occupancy"],
+            ol=config["refine_config"]["outlier_sizelimit"],
+            od=config["refine_config"]["outlier_difference"]
     resources: cpus=config["resources"]["cores"],
                mem_mb=config["resources"]["large_memory"]
     shell:
         """
             (
-            python run_udance.py refine -p {outdir}/udance/{wildcards.cluster} -m {params.method} -M {resources.mem_mb} -c {params.c} -o {params.occup} -T {resources.cpus}
+            python run_udance.py refine -p {outdir}/udance/{wildcards.cluster} -m {params.method} -M {resources.mem_mb} -c {params.c} -o {params.occup} -T {resources.cpus} -l {params.ol} -d {params.od}
             ) >> {udance_logpath} 2>&1
         """
 
