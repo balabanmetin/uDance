@@ -66,24 +66,34 @@ def subsample_partition(partition_output_dir, limit):
     x.dump(join(partition_output_dir, "adj_mat.pkl"), protocol=4)
     #print(x)
 
-    clow = 1
-    chigh = 100
-
-    while chigh > clow or chigh == 2:
-        cutoff = (chigh + clow + 1)//2
-        print(clow, cutoff, chigh)
+#    clow = 1
+#    chigh = 100
+#
+#    while chigh > clow or chigh == 2:
+#        cutoff = (chigh + clow + 1)//2
+#        print(clow, cutoff, chigh)
+#        y = (x >= (cutoff/100))
+#        n, components = connected_components(y)
+#        if limit < n:
+#            chigh = cutoff-1
+#        elif limit > n:
+#            clow = cutoff
+#        else:
+#            clow = cutoff
+#            chigh = cutoff # making sure clow=chigh always holds at the exit. we will print that.
+#            break
+    
+    cutoff = 100
+    curr = numspecies
+    while cutoff >= 2:
+        cutoff -= 1
         y = (x >= (cutoff/100))
         n, components = connected_components(y)
-        if limit < n:
-            chigh = cutoff-1
-        elif limit > n:
-            clow = cutoff
-        else:
-            clow = cutoff
-            chigh = cutoff # making sure clow=chigh always holds at the exit. we will print that.
+        curr = n
+        if curr < limit: 
             break
 
-    print("Partition " + partition_output_dir + " is pruned to %d taxa at the automatic cutoff %f." % (n, clow/100))
+    print("Partition " + partition_output_dir + " is pruned to %d taxa at the automatic cutoff %.2f." % (curr, cutoff/100))
 
     print("components %.3f." % (time.time() - start))
 

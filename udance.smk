@@ -207,6 +207,7 @@ checkpoint decompose:
     params:
         size=config["prep_config"]["cluster_size"],
         method=config["infer_config"]["method"],
+        edg=config["prep_config"]["edge_thr"],
         sub=config["prep_config"]["sublength"],
         frag=config["prep_config"]["fraglength"],
         pra=config["prep_config"]["pruneafter"],
@@ -219,9 +220,9 @@ checkpoint decompose:
             (
             cp {input.j} {outdir}/udance
             if [ "{params.char}" == "nuc" ]; then
-                python run_udance.py decompose -s {input.ind} -o {outdir}/udance -t {params.size} -j {input.j} -m {params.method} -T {resources.cpus} -l {params.sub} -f {params.frag}
+                python run_udance.py decompose -s {input.ind} -o {outdir}/udance -t {params.size} -j {input.j} -m {params.method} -T {resources.cpus} -l {params.sub} -f {params.frag} -e {params.edg}
             else
-                python run_udance.py decompose -p -s {input.ind} -o {outdir}/udance -t {params.size} -j {input.j} -m {params.method} -T {resources.cpus} -l {params.sub} -f {params.frag}
+                python run_udance.py decompose -p -s {input.ind} -o {outdir}/udance -t {params.size} -j {input.j} -m {params.method} -T {resources.cpus} -l {params.sub} -f {params.frag} -e {params.edg}
             fi
             python prune_similar.py -T {resources.cpus} -o {outdir}/udance -S {params.pra}
             if [  -f {outdir}/udance/dedupe_map.txt ]; then 

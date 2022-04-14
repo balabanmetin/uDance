@@ -82,7 +82,7 @@ def options_config():
     parser_decompose.add_argument("-C", "--occupancy", type=float, dest="occupancy_threshold", default=0.66,
                                   help="minimum fraction of species needed to call a gene. "
                                        "Must be a value between 0 and 1. highly occupant.")
-    parser_decompose.add_argument("-e", "--edge-threshold", type=float, dest="edge_threshold", default=0.02,
+    parser_decompose.add_argument("-e", "--edge-threshold", type=float, dest="edge_threshold", default=0.1,
                                   help="maximun edge length in a cluster.")
     parser_decompose.add_argument("-m", "--method", dest="method", choices=['raxml-ng', 'iqtree', 'raxml-8', 'copy'],
                                   default='raxml-8', help="method for subtree inference.")
