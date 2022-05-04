@@ -8,7 +8,7 @@ chartype: "nuc"
 # "tree": workdir/backbone.nwk is used as the backbone. Therefore genetreeinfer&refine_bb will be skipped
 # "list": workdir/species.txt is used as the list of backbone species. therefore mainlines will be skipped. However,
 # genetreeinfer&refine will still run to get a backbone tree.
-backbone: "tree"
+backbone: "de-novo"
 
 resources:
   # MBs
