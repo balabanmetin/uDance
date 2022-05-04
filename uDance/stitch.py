@@ -2,6 +2,7 @@ import json
 from os.path import join
 import treeswift as ts
 from pathlib import Path
+from uDance.stitch_strategy import strategy_dealer
 
 def deroot(tree):
     if len(tree.root.children) > 2:
@@ -46,12 +47,12 @@ def safe_midpoint_reroot(tree, node):
 
 
 def stitch(options):
-    for i in ["incremental", "updates"]:
-        stitch_gen(options, i)
+    for strat in strategy_dealer():
+        stitch_gen(options, strat)
     return
 
 
-def stitch_gen(options, suffix):
+def stitch_gen(options, strat):
     outmap_file = join(options.output_fp, "outgroup_map.json")
     with open(outmap_file) as o:
         outmap = json.load(o)
@@ -75,7 +76,7 @@ def stitch_gen(options, suffix):
                 mytree.root.add_child(_stitch(c).root)
             return mytree
 
-        astral_tree_par = ts.read_tree_newick(join(options.output_fp, node.label, "astral_output.%s.nwk" % suffix))
+        astral_tree_par = ts.read_tree_newick(strat.get_astral_treename(options.output_fp, node.label))
         for rc in astral_tree_par.root.children:
             if rc.label == None:
                 astral_tree_par.root.remove_child(rc)
@@ -226,9 +227,9 @@ def stitch_gen(options, suffix):
 
     stitched_tree = _stitch(cg.root)
     deroot(stitched_tree)
-    final_tree = join(options.output_fp, "udance.%s.nwk" % suffix)
+    final_tree = join(options.output_fp, "udance.%s.nwk" % strat.get_suffix())
     stitched_tree.write_tree_newick(final_tree)
-    unplaced = join(options.output_fp, "unplaced.%s.csv" % suffix)
+    unplaced = join(options.output_fp, "unplaced.%s.csv" % strat.get_suffix())
     with open(unplaced, "w") as f:
         f.write("\n".join(removed) + "\n")
     return
