@@ -1,4 +1,4 @@
-uDance version 1.5.0
+uDance version 1.5.1
 
 AUTHORS:
 Metin Balaban
@@ -9,6 +9,9 @@ Unix/Linux
 Anaconda
 
 Changelog:
+1.5.1:
+-Output tree may have branch lengths in substitution unit if desired.
+
 1.5.0:
 -uDance uses ASTRAL version 5.17.2, which supports both multithreading and constrained search.
 

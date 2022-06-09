@@ -280,19 +280,44 @@ rule refine:
             ) >> {udance_logpath} 2>&1
         """
 
+rule blinference:
+    input: expand("%s/udance/{{cluster}}/astral_output.{approach}.nwk" % outdir, approach=["incremental", "updates"])
+    output: expand("%s/udance/{{cluster}}/astral_output.{approach}.nwk.bl" % outdir, approach=["incremental", "updates"])
+    resources: cpus=config["resources"]["cores"],
+               mem_mb=config["resources"]["large_memory"]
+    shell:
+        '''
+            pwdd=`pwd`
+            for approach in incremental updates; do
+                java -Xmx{resources.mem_mb}M -jar $pwdd/uDance/tools/ASTRAL/astralmp.5.17.2.jar \
+                    -q {outdir}/udance/{wildcards.cluster}/astral_output.$approach.nwk \
+                    -i {outdir}/udance/{wildcards.cluster}/astral_input.trees \
+                    -o {outdir}/udance/{wildcards.cluster}/astral_output.$approach.nwk.bl \
+                    -C -T {resources.cpus} -u > {outdir}/udance/{wildcards.cluster}/astral.$approach.log.bl 2>&1
+            done
+        '''
+
 def aggregate_stitch_input(wildcards):
     checkpoint_output = os.path.dirname(checkpoints.decompose.get(**wildcards).output[0])
     wc = glob_wildcards(os.path.join(checkpoint_output, "{i}/species.txt"))
-    return [f"%s/udance/%s/astral_output.%s.nwk" % (outdir, i, j) for i in wc.i for j in ["incremental", "updates"]]
+    if config["refine_config"]["infer_branchlen"] in [False, "False"]:
+        return [f"%s/udance/%s/astral_output.%s.nwk" % (outdir, i, j) for i in wc.i for j in ["incremental", "updates"]]
+    else:
+        return [f"%s/udance/%s/astral_output.%s.nwk.bl" % (outdir, i, j) for i in wc.i for j in ["incremental", "updates"]]
 
 
 rule stitch:
     input: aggregate_stitch_input
     output: expand("%s/udance.{approach}.nwk" % outdir, approach=["incremental", "updates"])
+    params: b = config["refine_config"]["infer_branchlen"]
     shell:
         """
            (
-           python run_udance.py stitch -o {outdir}/udance
-           cp {outdir}/udance/udance.*.nwk {outdir}
+            if [[ "{params.b}" == "False" ]] ; then
+                python run_udance.py stitch -o {outdir}/udance
+            else
+                python run_udance.py stitch -o {outdir}/udance -b
+            fi
+            cp {outdir}/udance/udance.*.nwk {outdir}
            ) >> {udance_logpath} 2>&1
         """

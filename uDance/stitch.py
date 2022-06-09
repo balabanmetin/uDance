@@ -47,7 +47,7 @@ def safe_midpoint_reroot(tree, node):
 
 
 def stitch(options):
-    for strat in strategy_dealer():
+    for strat in strategy_dealer(options.branch_len):
         stitch_gen(options, strat)
     return
 

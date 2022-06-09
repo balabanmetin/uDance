@@ -67,6 +67,8 @@ refine_config:
   # 1D k-means-based (k=2) outlier gene detection parameter. Centroid difference must be 
   # larger than this value to designate the first cluster as outliers.
   outlier_difference: 0.1
+  # Experimental. Infer branch lengths in substitution unit using ASTRAL. [True, False]
+  infer_branchlen: True
 
 
 

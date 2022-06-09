@@ -5,8 +5,12 @@ import json
 
 class StitchStrat(ABC):
 
-    def __init__(self, suffix):
+    def __init__(self, suffix, blen):
         self.suffix = suffix
+        if blen:
+            self.blen = ".bl"
+        else:
+            self.blen = ""
 
     @abstractmethod
     def get_astral_treename(self, output_dir, cluster):
@@ -18,26 +22,26 @@ class StitchStrat(ABC):
 
 class IncrementalStrat(StitchStrat):
 
-    def __init__(self):
-        super(IncrementalStrat, self).__init__("incremental")
+    def __init__(self, blen):
+        super(IncrementalStrat, self).__init__("incremental", blen)
 
     def get_astral_treename(self, output_dir, cluster):
-        return join(output_dir, cluster, "astral_output.%s.nwk" % self.suffix)
+        return join(output_dir, cluster, "astral_output.%s.nwk%s" % (self.suffix, self.blen))
 
 
 class UpdatesStrat(StitchStrat):
 
-    def __init__(self):
-        super(UpdatesStrat, self).__init__("updates")
+    def __init__(self, blen):
+        super(UpdatesStrat, self).__init__("updates", blen)
 
     def get_astral_treename(self, output_dir, cluster):
-        return join(output_dir, cluster, "astral_output.%s.nwk" % self.suffix)
+        return join(output_dir, cluster, "astral_output.%s.nwk%s" % (self.suffix, self.blen))
 
 
 class MaxqsStrat(StitchStrat):
 
-    def __init__(self):
-        super(MaxqsStrat, self).__init__("maxqs")
+    def __init__(self, blen):
+        super(MaxqsStrat, self).__init__("maxqs", blen)
 
     def get_astral_treename(self, output_dir, cluster):
         qsdict = {}
@@ -51,10 +55,10 @@ class MaxqsStrat(StitchStrat):
         with open(join(output_dir, cluster, "quartet_scores.json"), "w") as f:
             json.dump(qsdict, f)
         if qsdict["incremental"] > qsdict["updates"]:
-            return join(output_dir, cluster, "astral_output.%s.nwk" % "incremental")
+            return join(output_dir, cluster, "astral_output.%s.nwk%s" % ("incremental", self.blen))
         else:
-            return join(output_dir, cluster, "astral_output.%s.nwk" % "updates")
+            return join(output_dir, cluster, "astral_output.%s.nwk%s" % ("updates", self.blen))
 
 
-def strategy_dealer():
-    return [IncrementalStrat(), UpdatesStrat(), MaxqsStrat()]
+def strategy_dealer(blen):
+    return [IncrementalStrat(blen), UpdatesStrat(blen), MaxqsStrat(blen)]

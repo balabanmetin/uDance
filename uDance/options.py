@@ -129,6 +129,8 @@ def options_config():
     parser_sti.add_argument("-T", "--threads", type=int, dest="num_thread", default=0,
                             help="number of cores used in placement. "
                                  "0 to use all cores in the running machine", metavar="NUMBER")
+    parser_sti.add_argument("-b", "--blen", dest="branch_len", action='store_true', default=False,
+                                  help="use ASTRAL partition trees with branch lengths.")
 
     parser_sti.set_defaults(func=stitch)
 
