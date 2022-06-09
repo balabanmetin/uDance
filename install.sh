@@ -17,4 +17,8 @@ else
 
         # julia needs to download packages during the first run. Let's do it now while we are online :)
         julia $SCRIPTS_DIR/uDance/correction_multi.jl datasmall/alignments/p0309.fasta > /dev/null
+        # install astral
+        pushd $SCRIPTS_DIR/uDance/tools/ASTRAL
+        ./make.sh
+        popd
 fi

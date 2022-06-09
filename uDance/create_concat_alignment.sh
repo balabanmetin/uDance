@@ -18,7 +18,8 @@ APB=$8
 APV=$9
 
 
-TDR=`mktemp -d $OUTDIR/createconcat`
+TDR=$OUTDIR/createconcat
+mkdir -p $TDR
 
 cat $ALNDIR/* | grep ">" | sed "s/>//g" | sort -u > $TDR/alltaxa.txt
 touch $TDR/alnpaths.txt

@@ -129,8 +129,8 @@ class PoolAstralWorker:
                 s = ["java", "-Xmx%sM" % cls.options.memory, "-jar", cls.astral_mp_exec, "-i", astral_input_file,
                     "-o", astral_output_file[mtd], "-C", "-T", str(cls.options.num_thread)]
             else:
-                s = ["java", "-Xmx%sM" % cls.options.memory, "-jar", cls.astral_exec, "-i", astral_input_file,
-                    "-o", astral_output_file[mtd], "-j", astral_const_file[mtd]]
+                s = ["java", "-Xmx%sM" % cls.options.memory, "-jar", cls.astral_mp_exec, "-i", astral_input_file,
+                    "-o", astral_output_file[mtd], "-j", astral_const_file[mtd], "-C", "-T", str(cls.options.num_thread)]
 
             with open(astral_log_file[mtd], "w") as lg:
                 with Popen(s, stdout=PIPE, stdin=PIPE, stderr=lg) as p:
