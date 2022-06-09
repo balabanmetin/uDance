@@ -181,6 +181,8 @@ def decompose(options):
     for n, ncopy in traversal:
         ncopy.resolved_randomly = n.resolved_randomly
         ncopy.placements = n.placements
+        if not n.is_root() and hasattr(n, "edge_index"):
+            ncopy.edge_index = n.edge_index
         if n.is_leaf():
             continue
         cl, cr = n.children

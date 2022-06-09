@@ -49,14 +49,18 @@ class PoolPartitionWorker:
                 a_file.write("\n")
 
         species_list_path = join(partition_output_dir, "species.txt")
+        edgeindices_list_path = join(partition_output_dir, "edgeindices.txt")
         species_list = []
         with open(species_list_path, "w") as f:
-            for n in j.traverse_postorder():
-                if n.is_leaf():
-                    species_list += [n.label]
-                    f.write(n.label + "\n")
-                if hasattr(n, 'placements'):
-                    for p in n.placements:
-                        species_list += [p]
-                        f.write(p + "\n")
+            with open(edgeindices_list_path, "w") as f2:
+                for n in j.traverse_postorder():
+                    if not n.is_root() and hasattr(n, "edge_index"):
+                        f2.write(str(n.edge_index) + "\n")
+                    if n.is_leaf():
+                        species_list += [n.label]
+                        f.write(n.label + "\n")
+                    if hasattr(n, 'placements'):
+                        for p in n.placements:
+                            species_list += [p]
+                            f.write(p + "\n")
         return species_list_path
