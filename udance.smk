@@ -289,7 +289,7 @@ rule blinference:
         '''
             pwdd=`pwd`
             for approach in incremental updates; do
-                java -Xmx{resources.mem_mb}M -jar $pwdd/uDance/tools/ASTRAL/astralmp.5.17.2.jar \
+                java -Xmx{resources.mem_mb}M -Djava.library.path=$pwdd/uDance/tools/ASTRAL/lib/ -jar $pwdd/uDance/tools/ASTRAL/astralmp.5.17.2.jar \
                     -q {outdir}/udance/{wildcards.cluster}/astral_output.$approach.nwk \
                     -i {outdir}/udance/{wildcards.cluster}/astral_input.trees \
                     -o {outdir}/udance/{wildcards.cluster}/astral_output.$approach.nwk.bl \

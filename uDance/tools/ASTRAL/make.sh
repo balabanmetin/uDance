@@ -22,22 +22,22 @@ cd ..
 sh compile_native_c_code.sh
 
 chmod +x astral.$version.jar astralmp.$version.jar
-sed -e "s/__astral.jar__/astral.$version.jar/g" -e "s/__astralmp.jar__/astralmp.$version.jar/g" -e "s/__astral.zip__/Astral.$version.zip/g" README.template.md > README.md
-sed -e "s/__astral.jar__/astral.$version.jar/g" -e "s/__astralmp.jar__/astralmp.$version.jar/g" -e "s/__astral.zip__/Astral.$version.zip/g" astral-tutorial-template.md > astral-tutorial.md
-rm -fr Astral/*
-mkdir -p  Astral
-cd Astral
-ln -s ../lib .
-ln -s ../README.md .
-ln -s ../astral.$version.jar .
-ln -s ../astralmp.$version.jar .
-ln -s ../native_library_tester.jar .
-ln -s ../main/test_data .
-ln -s ../astral-tutorial.pdf .
-ln -s ../thesis-astral.pdf .
-cd ..
-rm -f Astral.$version.zip
-zip -r Astral.$version.zip Astral 
+#sed -e "s/__astral.jar__/astral.$version.jar/g" -e "s/__astralmp.jar__/astralmp.$version.jar/g" -e "s/__astral.zip__/Astral.$version.zip/g" README.template.md > README.md
+#sed -e "s/__astral.jar__/astral.$version.jar/g" -e "s/__astralmp.jar__/astralmp.$version.jar/g" -e "s/__astral.zip__/Astral.$version.zip/g" astral-tutorial-template.md > astral-tutorial.md
+#rm -fr Astral/*
+#mkdir -p  Astral
+#cd Astral
+#ln -s ../lib .
+#ln -s ../README.md .
+#ln -s ../astral.$version.jar .
+#ln -s ../astralmp.$version.jar .
+#ln -s ../native_library_tester.jar .
+#ln -s ../main/test_data .
+#ln -s ../astral-tutorial.pdf .
+#ln -s ../thesis-astral.pdf .
+#cd ..
+#rm -f Astral.$version.zip
+#zip -r Astral.$version.zip Astral 
 
 set +x
 echo "

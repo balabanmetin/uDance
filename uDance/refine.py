@@ -5,10 +5,10 @@ from uDance.PoolAstralWorker import PoolAstralWorker
 
 def refine(options):
 
-    astral_exec = pkg_resources.resource_filename('uDance', "tools/ASTRAL/astral.5.17.2.jar")
+    astral_libdir = pkg_resources.resource_filename('uDance', "tools/ASTRAL/lib/")
     astral_mp_exec = pkg_resources.resource_filename('uDance', "tools/ASTRAL/astralmp.5.17.2.jar")
     partition_worker = PoolAstralWorker()
-    partition_worker.set_class_attributes(options, astral_exec, astral_mp_exec)
+    partition_worker.set_class_attributes(options, astral_mp_exec, astral_libdir)
     partition_worker.worker(options.partition_dir)
 
 

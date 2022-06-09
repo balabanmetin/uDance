@@ -13,14 +13,14 @@ from uDance.expand_dedupe_newick import expand_dedupe_newick
 
 class PoolAstralWorker:
     options = None
-    astral_exec = None
+    astral_libdir = None
     astral_mp_exec = None
 
     @classmethod
-    def set_class_attributes(cls, options, astral_exec, astral_mp_exec):
+    def set_class_attributes(cls, options, astral_mp_exec, astral_libdir):
         cls.options = options
-        cls.astral_exec = astral_exec
         cls.astral_mp_exec = astral_mp_exec
+        cls.astral_libdir = astral_libdir
 
     @classmethod
     def worker(cls, partition_output_dir):
@@ -126,10 +126,10 @@ class PoolAstralWorker:
                 break
             astral_log_file[mtd] = join(partition_output_dir, "astral.%s.log" % mtd)
             if not Path(astral_const_file[mtd]).is_file():
-                s = ["java", "-Xmx%sM" % cls.options.memory, "-jar", cls.astral_mp_exec, "-i", astral_input_file,
+                s = ["java", "-Xmx%sM" % cls.options.memory, "-Djava.library.path=%s" % cls.astral_libdir, "-jar", cls.astral_mp_exec, "-i", astral_input_file,
                     "-o", astral_output_file[mtd], "-C", "-T", str(cls.options.num_thread)]
             else:
-                s = ["java", "-Xmx%sM" % cls.options.memory, "-jar", cls.astral_mp_exec, "-i", astral_input_file,
+                s = ["java", "-Xmx%sM" % cls.options.memory, "-Djava.library.path=%s" % cls.astral_libdir, "-jar", cls.astral_mp_exec, "-i", astral_input_file,
                     "-o", astral_output_file[mtd], "-j", astral_const_file[mtd], "-C", "-T", str(cls.options.num_thread)]
 
             with open(astral_log_file[mtd], "w") as lg:

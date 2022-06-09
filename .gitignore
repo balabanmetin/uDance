@@ -1,3 +1,4 @@
 didactic/__pycache__/
 .snakemake
 wol2
+**/*.class
