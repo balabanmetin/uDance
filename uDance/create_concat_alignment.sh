@@ -18,7 +18,7 @@ APB=$8
 APV=$9
 
 
-TDR=`mktemp -dt placementruleXXXXXX`
+TDR=`mktemp -d $OUTDIR/createconcat`
 
 cat $ALNDIR/* | grep ">" | sed "s/>//g" | sort -u > $TDR/alltaxa.txt
 touch $TDR/alnpaths.txt
@@ -59,7 +59,7 @@ python -c "import treeswift as ts; t=ts.read_tree_newick(\"$TDR/backbone.tree\")
 # $4 number of threads
 # $5 all alignments dir
 bash uDance/filter_backbone.sh $OUTDIR/placement/backbone.fa $OUTDIR/placement/backbone.tree \
-      $CHARTYPE $NUMTHREADS $ALNDIR $APF $APM $APB $APV 2> $OUTDIR/placement/filtering.log > $OUTDIR/placement/filtered.txt
+      $CHARTYPE $NUMTHREADS $ALNDIR $APF $APM $APB $APV $TDR 2> $OUTDIR/placement/filtering.log > $OUTDIR/placement/filtered.txt
 
 # useless cat
 NUMFILT=`cat $OUTDIR/placement/filtered.txt | wc -l`

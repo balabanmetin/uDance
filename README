@@ -1,4 +1,4 @@
-uDance version 1.4.0
+uDance version 1.4.1
 
 AUTHORS:
 Metin Balaban
@@ -7,6 +7,11 @@ Yueyu Jiang
 PREREQUISITES:
 Unix/Linux
 Anaconda
+
+Changelog:
+1.4.1:
+-Performance improvements in placement_prep
+-Keep placement_prep intermediate files.
 
 Changelog:
 1.4.0:

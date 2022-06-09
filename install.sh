@@ -12,7 +12,7 @@ else
         trimal=1.4.1
         source activate udance
         conda activate udance
-        pip install apples==2.0.9 kmeans1d==0.3.1
+        pip install apples==2.0.10 kmeans1d==0.3.1
 	# install raxml-ng from the github release (conda conflict)
 
         # julia needs to download packages during the first run. Let's do it now while we are online :)

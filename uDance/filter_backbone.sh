@@ -15,45 +15,19 @@ export APF=$6
 export APM=$7
 export APB=$8
 export APV=$9
+export MNTMP=${10}
 
 export SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 
-export MNTMP=$(mktemp -dt filterXXXXXX)
-
-#echo $MNTMP
-
 export OMP_NUM_THREADS=1
-# compute backbone tree
+# compute backbone tree with branch lengths
 if [ "$CHARTYPE" == "nuc" ]; then
   fasttree -nt -nosupport -nopr -nome -noml -intree $BBONE <$ALN >$MNTMP/backbone_me.tree
-  build_applesdtb.py -T $NUMTHR -f $APF -s $ALN -t $MNTMP/backbone_me.tree -D -o $MNTMP/apples.dtb
 else
   fasttree -nosupport -nopr -nome -noml -intree $BBONE <$ALN >$MNTMP/backbone_me.tree
-  build_applesdtb.py -p -T $NUMTHR -f $APF -s $ALN -t $MNTMP/backbone_me.tree -D -o $MNTMP/apples.dtb
 fi
-# create apples database -D
 
-onequery() {
-  # $1 query name
-  QUERY=$1
-
-  TMP=$(mktemp -dt onequeryXXXXXX)
-  nw_prune $MNTMP/backbone_me.tree $QUERY >$TMP/backbone.nwk
-  seqkit grep -f <(echo $QUERY) -w 0 --quiet $ALN >$TMP/query.fa
-  if [ "$CHARTYPE" == "nuc" ]; then
-    run_apples.py -a $MNTMP/apples.dtb -t $TMP/backbone.nwk -q $TMP/query.fa -f $APF -m $APM -b $APB -V $APV -D -o $TMP/apples.jplace -T 1
-  else
-    run_apples.py -p -a $MNTMP/apples.dtb -t $TMP/backbone.nwk -q $TMP/query.fa -f $APF -m $APM -b $APB -V $APV -D -o $TMP/apples.jplace -T 1
-  fi
-  gappa examine graft --jplace-path=$TMP/apples.jplace --out-dir=$TMP >/dev/null 2>/dev/null
-  n1=$($SCRIPTS_DIR/tools/compareTrees.missingBranch $MNTMP/backbone_me.tree $TMP/apples.newick | awk '{printf $2}')
-  printf "$QUERY\t$n1\n"
-  rm -r $TMP
-}
-
-export -f onequery
-
-nw_labels -I $BBONE | xargs -n1 -P$NUMTHR -I% bash -c "onequery %" | sort -k2n >$MNTMP/RF.tsv
+$SCRIPTS_DIR/FastLoo $ALN $BBONE $CHARTYPE > $MNTMP/RF.tsv
 
 NSPCS=$(nw_labels -I $BBONE | wc -l)
 THRESH=$(python -c "import math; print(math.floor(math.log2($NSPCS)))")
@@ -64,7 +38,7 @@ NUMRMFIRST=$(wc -l < $MNTMP/removedfirststage.tsv)
 if [ "$NUMRMFIRST" -gt 0 ] ; then
   seqkit grep -vf $MNTMP/removedfirststage.tsv -w 0 --quiet $ALN >$MNTMP/backbone_secondstage.fa
 
-  nw_prune $MNTMP/backbone_me.tree $(cat $MNTMP/removedfirststage.tsv) >$MNTMP/backbone_secondstage.tree
+  nw_prune $BBONE $(cat $MNTMP/removedfirststage.tsv) >$MNTMP/backbone_secondstage.tree
 
   if [ "$CHARTYPE" == "nuc" ]; then
     fasttree -nt -nosupport -nopr -nome -noml -intree $MNTMP/backbone_secondstage.tree <$MNTMP/backbone_secondstage.fa >$MNTMP/backbone_secondstage_reestimated.tree
@@ -83,7 +57,7 @@ if [ "$NUMRMFIRST" -gt 0 ] ; then
       run_apples.py -p -a $MNTMP/apples_secondstage.dtb -q $MNTMP/query_secondstage.fa -f $APF -m $APM -b $APB -V $APV -o $MNTMP/apples.jplace -T 1
     fi
     gappa examine graft --jplace-path=$MNTMP/apples.jplace --out-dir=$MNTMP --allow-file-overwriting >/dev/null 2>/dev/null
-    n1=$($SCRIPTS_DIR/tools/compareTrees.missingBranch $MNTMP/backbone_me.tree $MNTMP/apples.newick -simplify | awk '{printf $2}')
+    n1=$($SCRIPTS_DIR/tools/compareTrees.missingBranch $BBONE $MNTMP/apples.newick -simplify | awk '{printf $2}')
     printf "$sp\t$n1\n"
   done < $MNTMP/removedfirststage.tsv > $MNTMP/RF2.tsv
 
@@ -111,4 +85,3 @@ python -c "from uDance.occupancy_outliers import occupancy_outliers; \
            occupancy_outliers(\"$ALLALNS\", \"$MNTMP/clusters.txt\", \"$CHARTYPE\"=='prot')" >$MNTMP/removedthirdstage.tsv
 cat $MNTMP/removedsecondstage.tsv $MNTMP/removedthirdstage.tsv
 
-#rm -r $MNTMP

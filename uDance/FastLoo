@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+
+# $1 The first input is a multiple sequence alignment
+# $2 a phylogenetic tree whose leaves are the input alignments
+# $3 nuc for nucleotide and prot for protein
+# Examples:
+# For nucleotide alignment
+# FastLoo aln.fa backbone.nwk nuc
+# For protein alignment
+# FastLoo aln.fa backbone.nwk prot
+
+export SCRIPTS_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+
+
+if [ "$3" == "prot" ]; then
+	run_apples.py -t $2 -p -s $1 -q $1 -o apples.jplace > fastloo.log 2>&1
+else
+	run_apples.py -t $2 -s $1 -q $1 -o apples.jplace > fastloo.log 2>&1
+fi
+
+gappa examine graft --jplace-path apples.jplace --allow-file-overwriting >> fastloo.log 2>&1
+python $SCRIPTS_DIR/fast_loo.py apples.newick 
