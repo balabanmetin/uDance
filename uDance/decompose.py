@@ -341,7 +341,7 @@ def decompose(options):
 
     all_scripts = prep_partition_alignments(options.alignment_dir_fp,
                                             options.protein_seqs,
-                                            species_path_list,
+                                            [pth for pth, skip in species_path_list if not skip],
                                             options.num_thread,
                                             options.subalignment_length,
                                             options.fragment_length)

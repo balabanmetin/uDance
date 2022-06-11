@@ -11,11 +11,14 @@
 
 export SCRIPTS_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
+export MKL_NUM_THREADS=1
+export NUMEXPR_NUM_THREADS=1
+export OMP_NUM_THREADS=1
 
 if [ "$3" == "prot" ]; then
-	run_apples.py -t $2 -p -s $1 -q $1 -o apples.jplace > fastloo.log 2>&1
+	run_apples.py -t $2 -p -s $1 -q $1 -V 0.05 -f 0.2 -b 25 -m FM -o apples.jplace > fastloo.log 2>&1
 else
-	run_apples.py -t $2 -s $1 -q $1 -o apples.jplace > fastloo.log 2>&1
+	run_apples.py -t $2 -s $1 -q $1 -V 0.05 -f 0.2 -b 25 -m FM -o apples.jplace > fastloo.log 2>&1
 fi
 
 gappa examine graft --jplace-path apples.jplace --allow-file-overwriting >> fastloo.log 2>&1

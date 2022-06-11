@@ -1,14 +1,25 @@
-uDance version 1.5.1
+uDance version 1.6.0
 
 AUTHORS:
 Metin Balaban
 Yueyu Jiang
 
-PREREQUISITES:
+Prerequisites:
 Unix/Linux
 Anaconda
+raxml-ng (if desired)
+
+Usage:
+snakemake -c 4 --configfile config.yaml --snakefile udance.smk all
+
+In the config.yaml, specify `workdir`. Multiple sequence alignments should be located under `workdir`/alignments.
+If there is a backbone tree as well, locate it as `workdir`/backbone.nwk and set backbone: "tree" in config.yaml
 
 Changelog:
+1.6.0
+-Skip a partition (return backbone) if the number of placements is it less than a desired number
+-Bug fixes
+
 1.5.1:
 -Output tree may have branch lengths in substitution unit if desired.
 
@@ -42,3 +53,6 @@ Changelog:
 1.2.1:
 -APPLES2 excludes sequences that are placed on internal nodes.
 -Filtered backbone sequences are no longer added to the query set.
+
+Tips/Tricks:
+Set min_placements: 9999999 to only filter out low quality backbone sequences and return.

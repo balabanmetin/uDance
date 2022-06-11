@@ -211,6 +211,7 @@ checkpoint decompose:
         sub=config["prep_config"]["sublength"],
         frag=config["prep_config"]["fraglength"],
         pra=config["prep_config"]["pruneafter"],
+        mps=config["prep_config"]["min_placements"],
         char=config["chartype"]
 
     resources: cpus=config["resources"]["cores"],
@@ -220,9 +221,13 @@ checkpoint decompose:
             (
             cp {input.j} {outdir}/udance
             if [ "{params.char}" == "nuc" ]; then
-                python run_udance.py decompose -s {input.ind} -o {outdir}/udance -t {params.size} -j {input.j} -m {params.method} -T {resources.cpus} -l {params.sub} -f {params.frag} -e {params.edg}
+                python run_udance.py decompose -s {input.ind} -o {outdir}/udance -t {params.size} -j {input.j} \
+                -m {params.method} -T {resources.cpus} -l {params.sub} -f {params.frag} -e {params.edg} \
+                --minplacements {params.mps}
             else
-                python run_udance.py decompose -p -s {input.ind} -o {outdir}/udance -t {params.size} -j {input.j} -m {params.method} -T {resources.cpus} -l {params.sub} -f {params.frag} -e {params.edg}
+                python run_udance.py decompose -p -s {input.ind} -o {outdir}/udance -t {params.size} -j {input.j} \
+                -m {params.method} -T {resources.cpus} -l {params.sub} -f {params.frag} -e {params.edg} \
+                --minplacements {params.mps}
             fi
             python prune_similar.py -T {resources.cpus} -o {outdir}/udance -S {params.pra}
             if [  -f {outdir}/udance/dedupe_map.txt ]; then 
@@ -289,11 +294,15 @@ rule blinference:
         '''
             pwdd=`pwd`
             for approach in incremental updates; do
-                java -Xmx{resources.mem_mb}M -Djava.library.path=$pwdd/uDance/tools/ASTRAL/lib/ -jar $pwdd/uDance/tools/ASTRAL/astralmp.5.17.2.jar \
-                    -q {outdir}/udance/{wildcards.cluster}/astral_output.$approach.nwk \
-                    -i {outdir}/udance/{wildcards.cluster}/astral_input.trees \
-                    -o {outdir}/udance/{wildcards.cluster}/astral_output.$approach.nwk.bl \
-                    -C -T {resources.cpus} -u > {outdir}/udance/{wildcards.cluster}/astral.$approach.log.bl 2>&1
+                if [ -f  {outdir}/udance/{wildcards.cluster}/skip_partition ] ; then
+                    cp {outdir}/udance/{wildcards.cluster}/astral_output.$approach.nwk {outdir}/udance/{wildcards.cluster}/astral_output.$approach.nwk.bl
+                else
+                    java -Xmx{resources.mem_mb}M -Djava.library.path=$pwdd/uDance/tools/ASTRAL/lib/ -jar $pwdd/uDance/tools/ASTRAL/astralmp.5.17.2.jar \
+                        -q {outdir}/udance/{wildcards.cluster}/astral_output.$approach.nwk \
+                        -i {outdir}/udance/{wildcards.cluster}/astral_input.trees \
+                        -o {outdir}/udance/{wildcards.cluster}/astral_output.$approach.nwk.bl \
+                        -C -T {resources.cpus} -u > {outdir}/udance/{wildcards.cluster}/astral.$approach.log.bl 2>&1
+                fi
             done
         '''
 

@@ -47,6 +47,10 @@ prep_config:
   fraglength: 75
   # large clusters are pruned. ASTRAL's limit is around 9000 for 400+ genes.
   pruneafter: 9000
+  # experimental. when number of queries landed on a partition are less than or equal to this number
+  # the partition will be skipped to save running time
+  min_placements: 0
+
 
 infer_config:
   # [raxml-ng,iqtree,raxml-8]
@@ -60,7 +64,7 @@ refine_config:
   # contract low support branches threshold. 0.9 for iqtree -abayes
   contract: 0.33
   # gene occupancy threshold for inclusion
-  occupancy: 5
+  occupancy: 2
   # 1D k-means-based (k=2) outlier gene detection parameter. Limit for outlier size fraction.
   # Larger clusters cannot be designated as outliers
   outlier_sizelimit: 0.2  

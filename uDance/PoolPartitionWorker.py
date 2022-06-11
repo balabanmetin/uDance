@@ -1,5 +1,8 @@
 from os.path import join
+import os
 from pathlib import Path
+import shutil
+import treeswift as ts
 
 from uDance.compute_bipartition_alignment import compute_bipartition_alignment
 
@@ -26,6 +29,10 @@ class PoolPartitionWorker:
     def worker(cls, i, j):
         partition_output_dir = join(cls.options.output_fp, str(i))
         Path(partition_output_dir).mkdir(parents=True, exist_ok=True)
+        try:
+            os.remove(join(partition_output_dir, "skip_partition"))
+        except OSError:
+            pass
         cls._undo_resolve_polytomies(j)
         newick_path = join(partition_output_dir, "astral_constraint.nwk")
         j.write_tree_newick(newick_path)
@@ -51,6 +58,8 @@ class PoolPartitionWorker:
         species_list_path = join(partition_output_dir, "species.txt")
         edgeindices_list_path = join(partition_output_dir, "edgeindices.txt")
         species_list = []
+        pcount = 0
+        skip = False
         with open(species_list_path, "w") as f:
             with open(edgeindices_list_path, "w") as f2:
                 for n in j.traverse_postorder():
@@ -61,6 +70,27 @@ class PoolPartitionWorker:
                         f.write(n.label + "\n")
                     if hasattr(n, 'placements'):
                         for p in n.placements:
+                            pcount += 1
                             species_list += [p]
                             f.write(p + "\n")
-        return species_list_path
+        if pcount <= cls.options.min_placements:
+            print("Number of placements on the partition %s is less than or equal to %d. "
+                  "Returning the backbone tree." % (str(i), cls.options.min_placements))
+            skip = True
+            Path(join(partition_output_dir, "skip_partition")).touch()
+            # jlabs = list(j.labels(internal=False))
+            # backbone_tree_fp = join(cls.options.output_fp, "../backbone.nwk")
+            # backbone_tree = ts.read_tree_newick(backbone_tree_fp)
+            # extracted_tree = backbone_tree.extract_tree_with(jlabs)
+            # input_tree_path = join(partition_output_dir, "astral_input.trees")
+            # extracted_tree.write_tree_newick(input_tree_path)
+            # for i in ["incremental", "updates"]:
+            #     newick_path = join(partition_output_dir, "astral_output.%s.nwk" % i)
+            #     newickbl_path = join(partition_output_dir, "astral_output.%s.nwk.bl" % i)
+            #     extracted_tree.write_tree_newick(newick_path)
+            #     extracted_tree.write_tree_newick(newickbl_path)
+            #     log_path = join(partition_output_dir, "astral.%s.log" % i)
+            #     with open(log_path, "w") as f:
+            #         f.write("Final quartet score is 1\n")
+
+        return species_list_path, skip

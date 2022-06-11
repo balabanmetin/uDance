@@ -55,13 +55,13 @@ def distance_between(n1, n2):
 
 t = ts.read_tree_newick(sys.argv[1])
 # find a backbone
-for n in t.traverse_postorder(internal=False):
-    if not n.label.endswith("-query"):
-        rrt = n
-        break
-
-t.reroot(n)
-t.suppress_unifurcations()
+# for n in t.traverse_postorder(internal=False):
+#     if not n.label.endswith("-query"):
+#         rrt = n
+#         break
+#
+# t.reroot(n)
+# t.suppress_unifurcations()
 set_levels(t)
 labs = [l for l in t.labels(internal=False) if not l.endswith("-query")]
 l2n = t.label_to_node(selection="leaves")

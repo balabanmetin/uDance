@@ -1,4 +1,4 @@
-from os.path import join
+from os.path import join, exists
 from glob import glob
 from pathlib import Path
 from sys import stderr, exit, stdout
@@ -24,6 +24,22 @@ class PoolAstralWorker:
 
     @classmethod
     def worker(cls, partition_output_dir):
+        if exists(Path(join(partition_output_dir, "skip_partition"))):
+            jlabs = list(ts.read_tree_newick(join(partition_output_dir, "astral_constraint.nwk")).labels())
+            backbone_tree_fp = join(partition_output_dir, "../../backbone.nwk")
+            backbone_tree = ts.read_tree_newick(backbone_tree_fp)
+            extracted_tree = backbone_tree.extract_tree_with(jlabs)
+            input_tree_path = join(partition_output_dir, "astral_input.trees")
+            extracted_tree.write_tree_newick(input_tree_path)
+            for i in ["incremental", "updates"]:
+                newick_path = join(partition_output_dir, "astral_output.%s.nwk" % i)
+                extracted_tree.write_tree_newick(newick_path)
+            #     newickbl_path = join(partition_output_dir, "astral_output.%s.nwk.bl" % i)
+            #     extracted_tree.write_tree_newick(newickbl_path)
+                log_path = join(partition_output_dir, "astral.%s.log" % i)
+                with open(log_path, "w") as f:
+                    f.write("Final quartet score is 1\n")
+            return
         genes = glob(join(partition_output_dir, "*", ""))
         median_map = dict()
         genetrees = dict()

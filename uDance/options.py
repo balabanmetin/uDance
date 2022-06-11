@@ -77,15 +77,20 @@ def options_config():
     parser_decompose.add_argument("-c", "--constrain-outgroups", dest="constrain_outgroups", action='store_true',
                                   default=False,
                                   help="enforce outgroup topology on gene tree estimation stage.")
+    # legacy
     parser_decompose.add_argument("-n", "--numtasks", type=int, dest="num_tasks", metavar='NUMBER', default=1,
                                   help="number of tasks where local refinement jobs will be split.")
     parser_decompose.add_argument("-C", "--occupancy", type=float, dest="occupancy_threshold", default=0.66,
                                   help="minimum fraction of species needed to call a gene. "
                                        "Must be a value between 0 and 1. highly occupant.")
     parser_decompose.add_argument("-e", "--edge-threshold", type=float, dest="edge_threshold", default=0.1,
-                                  help="maximun edge length in a cluster.")
+                                  help="maximum edge length in a cluster.")
     parser_decompose.add_argument("-m", "--method", dest="method", choices=['raxml-ng', 'iqtree', 'raxml-8', 'copy'],
                                   default='raxml-8', help="method for subtree inference.")
+    parser_decompose.add_argument("--minplacements", type=int, dest="min_placements", metavar='NUMBER', default=0,
+                                  help="the minimum number of placements that need to occur before "
+                                       "redoing the partition. Otherwise, uDance skips the partition and returns the"
+                                       " backbone tree with branch lengths.")
 
     parser_decompose.set_defaults(func=decompose)
 
