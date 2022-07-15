@@ -43,6 +43,7 @@ rule trimtaper:
     input: "%s/{gene}" % alndir
     output: "%s/trimdump/{gene}" % outdir
     params: thr=config["trim_config"]["percent_nongap"]
+    benchmark: "%s/benchmarks/trimtaper.{gene}.txt" % outdir
     shell:
         """
             (
@@ -69,6 +70,7 @@ rule mainlines:
             char=config["chartype"],
             bck=config["backbone"]
     resources: mem_mb=config["resources"]["large_memory"]
+    benchmark: "%s/benchmarks/mainlines.txt" % outdir
     shell:
         """
             (
@@ -89,6 +91,7 @@ checkpoint prepbackbonegenes:
     output: touch(os.path.join(outdir,"backbone/0/done.txt"))
     resources: cpus=config["resources"]["cores"],
                mem_mb=config["resources"]["large_memory"]
+    benchmark: "%s/benchmarks/prepbackbonegenes.txt" % outdir
     params: sub=config["prep_config"]["sublength"],
             frag=config["prep_config"]["fraglength"],
             char=config["chartype"],
@@ -135,6 +138,7 @@ if config["backbone"] != "tree":
             od=config["refine_config"]["outlier_difference"]
         resources: cpus=config["resources"]["cores"],
                    mem_mb=config["resources"]["large_memory"]
+        benchmark: "%s/benchmarks/refine_copy_bb.txt" % outdir
         shell:
             '''
                 (
@@ -146,6 +150,7 @@ else:
     rule copybb:
         input: os.path.join(outdir,"backbone/0/done.txt")
         output: bbone = bbone
+        benchmark: "%s/benchmarks/refine_copy_bb.txt" % outdir
         shell:
             '''
                 cp {input_bbone} {output.bbone}
@@ -164,6 +169,7 @@ rule placement_prep:
             v=config["apples_config"]["overlap"]
     resources: cpus=config["resources"]["cores"],
                mem_mb=config["resources"]["large_memory"]
+    benchmark: "%s/benchmarks/placement_prep.txt" % outdir
     shell:
         """
             (
@@ -183,6 +189,7 @@ rule placement:
             char=config["chartype"]
     resources: cpus=config["resources"]["cores"],
                mem_mb=config["resources"]["large_memory"]
+    benchmark: "%s/benchmarks/placement.txt" % outdir
     log: out=os.path.join(outdir,"placement/apples2.out"), err=os.path.join(outdir,"placement/apples2.err")
     shell:
         """
@@ -216,6 +223,7 @@ checkpoint decompose:
 
     resources: cpus=config["resources"]["cores"],
                mem_mb=config["resources"]["large_memory"]
+    benchmark: "%s/benchmarks/decompose.txt" % outdir
     shell:
         """
             (
@@ -250,6 +258,7 @@ rule genetreeinfer:
           s=config["infer_config"]["numstart"],
           thrd=config["infer_config"]["numthread"],
           t=config["infer_config"]["method"]
+    benchmark: "%s/{stage}/{cluster}/{gene}/benchmark.txt" % outdir
     shell:
         '''
             # many instances of this rule may run simultaneously. To reduce the IO overhead, we "sponge" the output
@@ -278,6 +287,8 @@ rule refine:
             od=config["refine_config"]["outlier_difference"]
     resources: cpus=config["resources"]["cores"],
                mem_mb=config["resources"]["large_memory"]
+    benchmark: "%s/benchmarks/refine.{cluster}.txt" % outdir
+
     shell:
         """
             (
@@ -290,6 +301,7 @@ rule blinference:
     output: expand("%s/udance/{{cluster}}/astral_output.{approach}.nwk.bl" % outdir, approach=["incremental", "updates"])
     resources: cpus=config["resources"]["cores"],
                mem_mb=config["resources"]["large_memory"]
+    benchmark: "%s/benchmarks/blinference.{cluster}.txt" % outdir
     shell:
         '''
             pwdd=`pwd`
@@ -319,6 +331,7 @@ rule stitch:
     input: aggregate_stitch_input
     output: expand("%s/udance.{approach}.nwk" % outdir, approach=["incremental", "updates"])
     params: b = config["refine_config"]["infer_branchlen"]
+    benchmark: "%s/benchmarks/stitch.txt" % outdir
     shell:
         """
            (

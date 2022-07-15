@@ -1,4 +1,4 @@
-uDance version 1.6.0
+uDance version 1.6.1
 
 AUTHORS:
 Metin Balaban
@@ -16,6 +16,9 @@ In the config.yaml, specify `workdir`. Multiple sequence alignments should be lo
 If there is a backbone tree as well, locate it as `workdir`/backbone.nwk and set backbone: "tree" in config.yaml
 
 Changelog:
+1.6.1
+-Benchmarks directives are used in udance.smk
+
 1.6.0
 -Skip a partition (return backbone) if the number of placements is it less than a desired number
 -Bug fixes
@@ -55,4 +58,6 @@ Changelog:
 -Filtered backbone sequences are no longer added to the query set.
 
 Tips/Tricks:
-Set min_placements: 9999999 to only filter out low quality backbone sequences and return.
+-Set min_placements: 9999999 to only filter out low quality backbone sequences and return.
+-Set config["mainlines_config"]["n"] to number of species in the dataset and config["backbone"] to "de-novo".
+Then run snakemake with target {outdir}/backbone.nwk. This will do species tree inference without divide and conquer.
