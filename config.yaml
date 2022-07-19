@@ -26,6 +26,9 @@ mainlines_config:
   # concatenation alignment length
   length: 5000
 
+# backbone filtering is recommended if backbone contains misplaced or noisy sequences
+backbone_filtering: False
+
 apples_config:
   # [FM, OLS]
   method: FM

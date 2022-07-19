@@ -16,6 +16,7 @@ APF=$6
 APM=$7
 APB=$8
 APV=$9
+FILTERING=${10}
 
 
 TDR=$OUTDIR/createconcat
@@ -54,6 +55,10 @@ nw_prune -v <(nw_topology -bI $BBONE) "${MAPFILE[@]}" > $TDR/backbone.tree
 python -c "import treeswift as ts; t=ts.read_tree_newick(\"$TDR/backbone.tree\"); \
           [c.resolve_polytomies() for c in t.root.children]; print(t)" > $OUTDIR/placement/backbone.tree
 
+if [[ "$FILTERING" == "False" ]]; then
+  printf "Skipping backbone filtering"
+  exit 0
+fi
 # $1 concat alignment
 # $2 bbone
 # $3 char
