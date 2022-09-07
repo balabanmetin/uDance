@@ -47,7 +47,8 @@ def distance_between(n1, n2):
         x = ps.get()
         if x.true_split:
             count += 1
-        ps.add(x.parent, -x.parent.level)
+        if x.parent != None:
+            ps.add(x.parent, -x.parent.level)
     mrca = ps.get()
     if mrca.true_split:
         count += 1

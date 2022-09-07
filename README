@@ -1,4 +1,4 @@
-uDance version 1.6.2
+uDance version 1.6.3
 
 AUTHORS:
 Metin Balaban
@@ -16,6 +16,10 @@ In the config.yaml, specify `workdir`. Multiple sequence alignments should be lo
 If there is a backbone tree as well, locate it as `workdir`/backbone.nwk and set backbone: "tree" in config.yaml
 
 Changelog:
+1.6.3
+-Cluster size can be automatically set
+-Bug fix
+
 1.6.2
 -Backbone filtering can be turned on or off
 

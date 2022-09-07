@@ -43,7 +43,11 @@ prep_config:
   # cluster must have a minimum diameter
   edge_thr: 0.02
   # approximate cluster size (no guarantees)
-  cluster_size: 50
+  # if "auto", uDance determines the size using standard formula
+  # Min[Round[8 Sqrt[n] + 3 Sqrt[m], 100], 2500]
+  # otherwise, this number can be any integer.
+  cluster_size: "auto"
+  #cluster_size: 50
   # minimum subtree alignment length
   sublength: 100
   # minimum fragment length

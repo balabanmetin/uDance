@@ -229,12 +229,21 @@ checkpoint decompose:
         """
             (
             cp {input.j} {outdir}/udance
+            if [ "{params.size}" == "auto" ]; then
+                numq=`grep ">" {outdir}/placement/query.fa  | wc -l`
+                numbb=`grep ">" {outdir}/placement/backbone.fa  | wc -l`
+                clustsz=`python -c "import math; print(int(min(2500,round(8*math.sqrt($numbb)+3*math.sqrt($numq),-2))))"`
+                echo "Cluster size is set to $clustsz (automatically)"
+            else
+                clustsz="{params.size}"
+                echo "Cluster size is set to $clustsz (user-choice)"
+            fi
             if [ "{params.char}" == "nuc" ]; then
-                python run_udance.py decompose -s {input.ind} -o {outdir}/udance -t {params.size} -j {input.j} \
+                python run_udance.py decompose -s {input.ind} -o {outdir}/udance -t $clustsz -j {input.j} \
                 -m {params.method} -T {resources.cpus} -l {params.sub} -f {params.frag} -e {params.edg} \
                 --minplacements {params.mps}
             else
-                python run_udance.py decompose -p -s {input.ind} -o {outdir}/udance -t {params.size} -j {input.j} \
+                python run_udance.py decompose -p -s {input.ind} -o {outdir}/udance -t $clustsz -j {input.j} \
                 -m {params.method} -T {resources.cpus} -l {params.sub} -f {params.frag} -e {params.edg} \
                 --minplacements {params.mps}
             fi
