@@ -89,3 +89,8 @@ def min_tree_coloring_sum_max(tree, thr, max_thr):
                 else:
                     paint(lighter, color); color += 1
                     current.farthest = 0
+    all_edge_colors = [i.color for i in list(tree.traverse_postorder())]
+    minus_one_colors = [i for i in all_edge_colors if i == -1]
+    if len(minus_one_colors) > 1:
+        paint(tree.root, color)
+    tree.root.color=-1

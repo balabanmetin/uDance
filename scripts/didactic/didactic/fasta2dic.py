@@ -50,5 +50,5 @@ def fasta2dic(ref_fp, prot_flag, mask_flag):
                 return s.upper()
 
         for name, seq, qual in readfq(f):
-                refs[name] = np.frombuffer(makeupper(seq).translate(invalid_translation).encode(), dtype='S1')
+                refs[name] = np.frombuffer(seq.encode(), dtype='S1')
     return refs

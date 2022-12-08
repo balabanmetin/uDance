@@ -185,6 +185,7 @@ def decompose(options):
 
     Path(options.output_fp).mkdir(parents=True, exist_ok=True)
     color_spanning_tree, color_to_node_map = build_color_spanning_tree(tstree)
+    #import pdb; pdb.set_trace()
     color_spanning_tree.write_tree_newick(join(options.output_fp, "color_spanning_tree.nwk"))
     copyts = tstree.extract_tree_with(labels=tstree.labels())
     for n in copyts.traverse_preorder():

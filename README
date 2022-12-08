@@ -1,0 +1,20 @@
+uDance v1.1.0. This is the legacy version of uDance. The latest version of uDance is located at https://github.com/balabanmetin/uDance v1.6.3 and onwards.
+
+This version is limited to incremental tree growing, refinement using IQTree-fastmode, single sequence or gene (such as 16S gene or SarsCov2-genome) and can be run in a single cluster node.
+
+Authors: Yueyu Jiang and Metin Balaban
+
+Usage of uDance pipeline
+
+1. Run `bash install.sh` to install the conda environment.
+2. Run `bash run.sh -b $backbone_tree -s $sequence_file -l $tolerance -o $output_dir -t $thread -c $subset`
+   Note that Running uDance pipeline in Expanse compute node using 128 cores is required.
+   a. backbone_tree: the backbone tree file. uDance will expand the new sequences onto that tree. (*Important* the input backbone tree should not contain polytomies, when duplicate sequences are removed. In other words, the only kind of polytomies in the backbone should be the trivial ones where all descendents have identical sequences. A script for resolving polytomies using RAxML-8 can be found at scripts/raxml_resolve.sh. This should be executed before the first pipeline run if necessary. The output of uDance pipeline is guaranteed to have all the non-trivial polytomies resolved. Thus, usage of raxml_resolve.sh in subsequent runs is not necessary. The usage is `bash scripts/raxml_resolve.sh $unresolved_backbone_tree $sequence_file $resolved_backbone_tree` where $resolved_backbone_tree is the file output tree should be written. )
+   b. sequence_file: the sequences file that contains the alignments.
+   c. tolerance: the maximum number of unplaced sequences allowed to be missed in the resulting uDance tree.
+   d. output_dir: output directory of the results.
+   e. thread: number of threads that would use.
+   f. subset: the size of the subset. default: 2000
+3. Results of uDance tree would be in $output_dir. Inside that directory, there are:
+   a. didactic_full.nwk: the resulting uDance tree. This tree can be the input backbone tree of the next run.
+   b. directory with name in number d (1 <= d <= 5). These are directories that contain the intermediate uDance results. Sequences missed in the uDance tree can be found under the directory named with the largest number. The filename is unplaced.csv.

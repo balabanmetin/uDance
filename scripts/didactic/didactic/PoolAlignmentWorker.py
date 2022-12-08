@@ -138,27 +138,27 @@ class PoolAlignmentWorker:
                             if os.path.isfile(astral_constraint_path):
                                 shutil.copy(astral_constraint_path, iqtree_constraint_path)
                                 f.write("iqtree2 -s %s --prefix %s "
-                                        "--seed 12345 -T AUTO --model LG+G -g %s > %s 2> %s \n"
-                                        % (aln_output_path, iqtree_run,
+                                        "--seed 12345 -T %s --fast --runs 3 --model LG+G -g %s > %s 2> %s \n"
+                                        % (aln_output_path, iqtree_run, min(cls.options.num_thread, 4),
                                            iqtree_constraint_path,
                                            iqtree_out, iqtree_err))
                             else:
                                 f.write("iqtree2 -s %s --prefix %s "
-                                        "--seed 12345 -T AUTO --model LG+G -g %s > %s 2> %s \n"
-                                        % (aln_output_path, iqtree_run,
+                                        "--seed 12345 -T %s --fast --runs 3 --model LG+G -g %s > %s 2> %s \n"
+                                        % (aln_output_path, iqtree_run, min(cls.options.num_thread, 4),
                                            iqtree_out, iqtree_err))
                         else:
                             if os.path.isfile(astral_constraint_path):
                                 shutil.copy(astral_constraint_path, iqtree_constraint_path)
                                 f.write("iqtree2 -s %s --prefix %s "
-                                        "--seed 12345 -T AUTO --model GTR+F+G4 -g %s > %s 2> %s \n"
-                                        % (aln_output_path, iqtree_run,
+                                        "--seed 12345 -T %s --fast --runs 3 --model GTR+F+G4 -g %s > %s 2> %s \n"
+                                        % (aln_output_path, iqtree_run, min(cls.options.num_thread, 4),
                                            iqtree_constraint_path,
                                            iqtree_out, iqtree_err))
                             else:
                                 f.write("iqtree2 -s %s --prefix %s "
-                                        "--seed 12345 -T AUTO --model GTR+F+G4 > %s 2> %s \n"
-                                        % (aln_output_path, iqtree_run,
+                                        "--seed 12345 -T %s --fast --runs 3 --model GTR+F+G4 > %s 2> %s \n"
+                                        % (aln_output_path, iqtree_run, min(cls.options.num_thread, 4),
                                            iqtree_out, iqtree_err))
                     elif cls.options.method == 'raxml-ng':
                         f.write("raxml-ng --force perf_threads --tree %s "
@@ -176,24 +176,24 @@ class PoolAlignmentWorker:
                                 shutil.copy(astral_constraint_path, raxml8_constraint_path)
                                 f.write("raxmlHPC-PTHREADS -s %s -w %s -n %s "
                                         "-p 12345 -T %s -m LG+G -g %s > %s 2> %s \n"
-                                        % (aln_output_path, aln_outdir, raxml8_run, min(cls.options.num_thread, 16),
+                                        % (aln_output_path, aln_outdir, raxml8_run, min(cls.options.num_thread, 4),
                                            raxml8_constraint_path, raxml8_out, raxml8_err))
                             else:
                                 f.write("raxmlHPC-PTHREADS -s %s -w %s -n %s "
                                         "-p 12345 -T %s -m LG+G > %s 2> %s \n"
-                                        % (aln_output_path, aln_outdir, raxml8_run, min(cls.options.num_thread, 16),
+                                        % (aln_output_path, aln_outdir, raxml8_run, min(cls.options.num_thread, 4),
                                            raxml8_out, raxml8_err))
                         else:
                             if os.path.isfile(astral_constraint_path):
                                 shutil.copy(astral_constraint_path, raxml8_constraint_path)
                                 f.write("raxmlHPC-PTHREADS -s %s -w %s -n %s "
                                         "-p 12345 -T %s -m GTRCAT -g %s > %s 2> %s \n"
-                                        % (aln_output_path, aln_outdir, raxml8_run, min(cls.options.num_thread, 16),
+                                        % (aln_output_path, aln_outdir, raxml8_run, min(cls.options.num_thread, 4),
                                            raxml8_constraint_path, raxml8_out, raxml8_err))
                             else:
                                 f.write("raxmlHPC-PTHREADS -s %s -w %s -n %s "
                                         "-p 12345 -T %s -m GTRCAT > %s 2> %s \n"
-                                        % (aln_output_path, aln_outdir, raxml8_run, min(cls.options.num_thread, 16),
+                                        % (aln_output_path, aln_outdir, raxml8_run, min(cls.options.num_thread, 4),
                                            raxml8_out, raxml8_err))
             st = os.stat(script)
             os.chmod(script, st.st_mode | stat.S_IEXEC)
