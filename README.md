@@ -44,7 +44,19 @@ uDance workflow is implemented using Snakemake. Below is the diagram of the rule
 
 Brief summary of each rule:
 
+|     | Rule                  | Description                                                                          | #instances             |
+|-----|-----------------------|--------------------------------------------------------------------------------------|------------------------|
+| 1   | trimtaper/trimcollect | Alignment trimming and error correction using ASTER                                  | `#genes`               |
+| 2   | mainlines             | Selection of a subset of sequences for backbone using Mainlines algorithm            | 1                      |
+| 3   | prepbackbonegenes     | Creating one partition for the selected backbone sequences                           | `#genes`               |
+| 4   | genetreeinfer         | Gene tree inference (RAxML, IQTree-2, or RAxML-NG)                                   | `#genes × #partitions` |
+| 5   | refine                | ASTRAL species tree inference                                                        | `#partitions`          |
+| 6   | placement_prep        | Backbone quality control, filtering, and MSA concatenation of phylogenetic placement | 1                      |
+| 7   | placement             | Phylogenetic placement of query sequences onto backbone tree using APPLES-2          | 1                      |
+| 8   | decompose             | Placement tree decomposition algorithm and creation of partitions                    | 1                      |
+| 9   | stitch                | Stitching algorithm for partition species trees                                      | 1                      |
 
+Note that `genetreeinfer` and `refine` rules is used in two separate parts of the workflow: once to obtain the backbone tree (de-novo) and once on every the partition created after phylogenetic placement.
 
 ## Output
 
@@ -61,7 +73,7 @@ uDance workflow also outputs many intermediate files. These intermediate files c
 ## uDance configuration settings
 
 |            Parameter             |                                                Description                                                 |
-|:---------------------:|:-----------------------------------------------:|
+|:--------------------------------:|:----------------------------------------------------------------------------------------------------------:|
 |             chartype             |                                    Amino-acid or nucleotide characters                                     |
 |             backbone             |             Three backbone tree source options. (1) de-novo, (2) user tree, and (3) user list              |
 |      resources.large_memory      |                                    Large memory jobs memory limit (MB)                                     |
