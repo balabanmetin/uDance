@@ -34,7 +34,7 @@ You can run uDance on the **test dataset** with 10 gene multiple sequence alignm
 
 The specification of the run is defined in the config file `config.yaml`. In the `config.yaml`, the working directory is specified using the field `workdir`. Input multiple sequence alignments should be located under `<workdir>/alignments`. For example, for the test dataset, the working directory is `datasmall` and the input alignments are located at `datasmall/alignments`.
 
-If there is an input backbone tree as well, it should be locate it at `<workdir>/backbone.nwk` and the field in the config file `backbone` should be set to `"tree"`.
+If there is an input backbone tree as well, it should be locate it at `<workdir>/backbone.nwk` and `backbone` field in the config file should be set to `"tree"`.
 
 ## Workflow overview
 
