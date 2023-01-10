@@ -1,6 +1,6 @@
 # uDance: Updating phylogenetic and phylogenomic trees using divide and conquer
 
-<img src="https://github.com/balabanmetin/uDance/raw/master/logo.png" alt="uDance logo" width="300"/>
+<img src="https://github.com/balabanmetin/uDance/raw/master/logo.png" alt="uDance logo" width="250"/>
 
 ### Latest Version
 
@@ -40,7 +40,7 @@ If there is an input backbone tree as well, it should be locate it at `<workdir>
 
 uDance workflow is implemented using Snakemake.
 
-<img src="https://github.com/balabanmetin/uDance/raw/master/rules.pdf" alt="workflow rules" width="900"/>
+<img src="https://github.com/balabanmetin/uDance/raw/master/rules.png" alt="workflow rules" width="750"/>
 
 ## Output
 
@@ -57,7 +57,7 @@ uDance workflow also outputs many intermediate files. These intermediate files c
 ## uDance configuration settings
 
 |            Parameter             |                                                Description                                                 |
-|:-------------------:|:-------------------------------------------------:|
+|:--------------------:|:------------------------------------------------:|
 |             chartype             |                                    Amino-acid or nucleotide characters                                     |
 |             backbone             |             Three backbone tree source options. (1) de-novo, (2) user tree, and (3) user list              |
 |      resources.large_memory      |                                    Large memory jobs memory limit (MB)                                     |
