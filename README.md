@@ -38,9 +38,13 @@ If there is an input backbone tree as well, it should be locate it at `<workdir>
 
 ## Workflow overview
 
-uDance workflow is implemented using Snakemake.
+uDance workflow is implemented using Snakemake. Below is the diagram of the rule graph showing the relationship between each stage in the workflow.
 
-<img src="https://github.com/balabanmetin/uDance/raw/master/rules.png" alt="workflow rules" width="750"/>
+<img src="https://github.com/balabanmetin/uDance/raw/master/rules.png" alt="workflow rules"/>
+
+Brief summary of each rule:
+
+
 
 ## Output
 
@@ -57,7 +61,7 @@ uDance workflow also outputs many intermediate files. These intermediate files c
 ## uDance configuration settings
 
 |            Parameter             |                                                Description                                                 |
-|:--------------------:|:------------------------------------------------:|
+|:---------------------:|:-----------------------------------------------:|
 |             chartype             |                                    Amino-acid or nucleotide characters                                     |
 |             backbone             |             Three backbone tree source options. (1) de-novo, (2) user tree, and (3) user list              |
 |      resources.large_memory      |                                    Large memory jobs memory limit (MB)                                     |
