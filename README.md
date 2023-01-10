@@ -6,6 +6,10 @@
 
 uDance version 1.6.3
 
+### Data used in the manuscript
+
+https://github.com/balabanmetin/udance-data
+
 ## What is uDance?
 
 uDance is highly-scalable end-to-end workflow for inferring phylogenomic trees or updating existing ones. The input to uDance is a backbone tree, a set of DNA xor amino-acid multiple sequence alignments (MSAs) of backbone sequences, and new (query) sequences. Alternatively, when a backbone tree is not available, uDance can select a set of backbone species with high diversity to reconstruct a backbone tree. At a high level, uDance inserts the query sequences on the backbone tree independently and then refines the tree locally in different parts. The backbone is allowed to change based on the new information provided by the query sequences, but uDance also outputs an *incremental* tree with the backbone relationships fixed for users that require consistency between updates in their analyses. Since uDance aims for automatic analyses of large data, it has many built-in quality control and filtering strategies; it may decide a set of query sequences cannot be confidently put in the output tree (i.e., are unplacable) and some backbones need to be removed. When more sequences become available, the output from the previous iteration can be used as the input in the next iteration to incrementally grow the tree.
