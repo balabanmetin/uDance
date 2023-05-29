@@ -112,6 +112,10 @@ Yueyu Jiang
 
 ## Changelog
 
+1.6.4
+
+-   Do not transfer branch supports after ASTRAL branch length estimation
+
 1.6.3
 
 -   Cluster size can be automatically set

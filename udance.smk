@@ -324,6 +324,8 @@ rule blinference:
                         -i {outdir}/udance/{wildcards.cluster}/astral_input.trees \
                         -o {outdir}/udance/{wildcards.cluster}/astral_output.$approach.nwk.bl \
                         -C -T {resources.cpus} -u > {outdir}/udance/{wildcards.cluster}/astral.$approach.log.bl 2>&1
+                    mv {outdir}/udance/{wildcards.cluster}/astral_output.$approach.nwk.bl {outdir}/udance/{wildcards.cluster}/astral_output.$approach.nwk.bl.falsesupport
+                    python uDance/transfer_supports.py {outdir}/udance/{wildcards.cluster}/astral_output.$approach.nwk {outdir}/udance/{wildcards.cluster}/astral_output.$approach.nwk.bl.falsesupport > {outdir}/udance/{wildcards.cluster}/astral_output.$approach.nwk.bl
                 fi
             done
         '''
