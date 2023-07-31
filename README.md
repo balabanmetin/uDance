@@ -1,18 +1,18 @@
-# uDANCE: Updating phylogenetic and phylogenomic trees using divide and conquer
+# uDance: Updating phylogenetic and phylogenomic trees using divide and conquer
 
-<img src="https://github.com/balabanmetin/uDANCE/raw/master/logo.png" alt="uDANCE logo" width="250"/>
+<img src="https://github.com/balabanmetin/uDance/raw/master/logo.png" alt="uDance logo" width="250"/>
 
 ### Latest Version
 
-uDANCE version 1.6.3
+uDance version 1.6.3
 
 ### Data used in the manuscript
 
-https://github.com/balabanmetin/uDANCE-data
+https://github.com/balabanmetin/uDance-data
 
-## What is uDANCE?
+## What is uDance?
 
-uDANCE is highly-scalable end-to-end workflow for inferring phylogenomic trees or updating existing ones. The input to uDANCE is a backbone tree, a set of DNA xor amino-acid multiple sequence alignments (MSAs) of backbone sequences, and new (query) sequences. Alternatively, when a backbone tree is not available, uDANCE can select a set of backbone species with high diversity to reconstruct a backbone tree. At a high level, uDANCE inserts the query sequences on the backbone tree independently and then refines the tree locally in different parts. The backbone is allowed to change based on the new information provided by the query sequences, but uDANCE also outputs an *incremental* tree with the backbone relationships fixed for users that require consistency between updates in their analyses. Since uDANCE aims for automatic analyses of large data, it has many built-in quality control and filtering strategies; it may decide a set of query sequences cannot be confidently put in the output tree (i.e., are unplacable) and some backbones need to be removed. When more sequences become available, the output from the previous iteration can be used as the input in the next iteration to incrementally grow the tree.
+uDance is highly-scalable end-to-end workflow for inferring phylogenomic trees or updating existing ones. The input to uDance is a backbone tree, a set of DNA xor amino-acid multiple sequence alignments (MSAs) of backbone sequences, and new (query) sequences. Alternatively, when a backbone tree is not available, uDance can select a set of backbone species with high diversity to reconstruct a backbone tree. At a high level, uDance inserts the query sequences on the backbone tree independently and then refines the tree locally in different parts. The backbone is allowed to change based on the new information provided by the query sequences, but uDance also outputs an *incremental* tree with the backbone relationships fixed for users that require consistency between updates in their analyses. Since uDance aims for automatic analyses of large data, it has many built-in quality control and filtering strategies; it may decide a set of query sequences cannot be confidently put in the output tree (i.e., are unplacable) and some backbones need to be removed. When more sequences become available, the output from the previous iteration can be used as the input in the next iteration to incrementally grow the tree.
 
 ## Installation
 
@@ -24,7 +24,7 @@ uDANCE is highly-scalable end-to-end workflow for inferring phylogenomic trees o
 ### Installation steps:
 
 1.  Clone the repository
-2.  `cd uDANCE`
+2.  `cd uDance`
 3.  `bash install.sh`
 4.  `conda activate udance`
 
@@ -32,7 +32,7 @@ If you want to use raxml-ng in your workflow, please install raxml-ng manually a
 
 ## Quick start
 
-You can run uDANCE on the **test dataset** with 10 gene multiple sequence alignments, 99 backbone sequences, and 146 query sequences using the following command. The command should complete in several minutes using 4 CPU cores:
+You can run uDance on the **test dataset** with 10 gene multiple sequence alignments, 99 backbone sequences, and 146 query sequences using the following command. The command should complete in several minutes using 4 CPU cores:
 
 `snakemake -c 4 --configfile config.yaml --snakefile udance.smk all`
 
@@ -42,7 +42,7 @@ If there is an input backbone tree as well, it should be locate it at `<workdir>
 
 ## Workflow overview
 
-uDANCE workflow is implemented using Snakemake. Below is the diagram of the rule graph showing the relationship between each stage in the workflow.
+uDance workflow is implemented using Snakemake. Below is the diagram of the rule graph showing the relationship between each stage in the workflow.
 
 <img src="https://github.com/balabanmetin/udance/raw/master/rules.png" alt="workflow rules"/>
 
@@ -64,17 +64,17 @@ Note that `genetreeinfer` and `refine` rules is used in two separate parts of th
 
 ## Output
 
-uDANCE writes its output under the directory `<workdir>/output`. The workflow outputs three phylogenies: `<workdir>/output/udance.maxqs.nwk`, `<workdir>/output/udance.incremental.nwk`, and `<workdir>/output/udance.updates.nwk`. `incremental` tree guarantees that the backbone topology is fixed in the output tree. `maxqs` tree is the "best" one inferred by uDANCE and the location of backbone sequences might change after insertion of query sequences. We will shortly come back to the exact definition of these three output trees.
+uDance writes its output under the directory `<workdir>/output`. The workflow outputs three phylogenies: `<workdir>/output/udance.maxqs.nwk`, `<workdir>/output/udance.incremental.nwk`, and `<workdir>/output/udance.updates.nwk`. `incremental` tree guarantees that the backbone topology is fixed in the output tree. `maxqs` tree is the "best" one inferred by uDance and the location of backbone sequences might change after insertion of query sequences. We will shortly come back to the exact definition of these three output trees.
 
-uDANCE workflow also outputs many intermediate files. These intermediate files can be useful for user for debugging as well as to supplement the downstream analysis. All paths below are given in relative to the output directory `<workdir>/output`.
+uDance workflow also outputs many intermediate files. These intermediate files can be useful for user for debugging as well as to supplement the downstream analysis. All paths below are given in relative to the output directory `<workdir>/output`.
 
 1.  `trimmed` containes trimmed input MSAs.
 2.  `backbone.nwk` is the backbone file. If there is an input backbone tree, it's identical to the input backbone tree. Otherwise, backbone sequences are selected using Mainlines algorithm and selected sequence IDs are written to `backbone/0/species.txt`. Gene trees for the selected sequences are found in the directory `backbone/0/<gene>`. This directory contains subdirectories named `1` to `k`, where `k` is the number of starting trees for the inference of the gene tree for this gene. `backbone/0/<gene>/<i>/shrunk.fasta.treefile` is the inferred maximum likelihood tree for the gene using the starting tree `i`. The highest likelihood tree among all `k` starts is `backbone/0/<gene>/bestTree.nwk` and relative-path to the starting tree that yielded the highest likelihood is `backbone/0/<gene>/bestTreename.txt`. All gene trees in newick format are written to `backbone/0/astral_input.trees`, one line per tree. This file is provided to ASTRAL as the input. No constraint tree is used during the estimation of the backbone tree. ASTRAL's output file (a newick tree) is `backbone/0/astral_output.updates.nwk`.
 3.  `placement` contains the backbone and query alignments and the backbone tree used at the placement stage. `placement.jplace` is the jplace file output by APPLES-2.
-4.  The partitions created by uDANCE are located under the directory `udance`. This directory contains subdirectories named `0` to `p-1`, where `p` is the number of partitions designated for the uDANCE run. `atasmall/output/udance/<partition>/species.txt` contains the list of backbone, query, and outgroup sequences in the partition. The organization of the partition is almost identical to the "partition" `backbone/0` given in the item 2 above but there are a few differences. `datasmall/output/udance/<partition>/astral_constraint.nwk` and `datasmall/output/udance/<partition>/raxml_constraint.nwk` are the two kinds of constraint trees used in ASTRAL stage. The former results in an ASTRAL tree (`datasmall/output/udance/<partition>/astral_output.incremental.nwk`) that retains the backbone tree topology and the latter allows topological changes aming the backbone sequences (`datasmall/output/udance/<partition>/astral_output.updates.nwk`).
+4.  The partitions created by uDance are located under the directory `udance`. This directory contains subdirectories named `0` to `p-1`, where `p` is the number of partitions designated for the uDance run. `atasmall/output/udance/<partition>/species.txt` contains the list of backbone, query, and outgroup sequences in the partition. The organization of the partition is almost identical to the "partition" `backbone/0` given in the item 2 above but there are a few differences. `datasmall/output/udance/<partition>/astral_constraint.nwk` and `datasmall/output/udance/<partition>/raxml_constraint.nwk` are the two kinds of constraint trees used in ASTRAL stage. The former results in an ASTRAL tree (`datasmall/output/udance/<partition>/astral_output.incremental.nwk`) that retains the backbone tree topology and the latter allows topological changes aming the backbone sequences (`datasmall/output/udance/<partition>/astral_output.updates.nwk`).
 5.  (continued) The spanning tree of partitions of the placement tree is available at `datasmall/output/udance/color_spanning_tree.nwk`. This can be regarded as the hierarchy or relative positions of the partitions. `datasmall/output/udance/outgroup_map.json` is a dictionary where, for each partition, we list the outgroup sequences (stored in keys `children` and `up`). These two files are used during stitching ASTRAL output trees of the partitions.
 
-## uDANCE configuration settings
+## uDance configuration settings
 
 |            Parameter             |                                                Description                                                 |
 |:--------------------------------:|:----------------------------------------------------------------------------------------------------------:|
@@ -142,7 +142,7 @@ Yueyu Jiang
 
 1.5.0:
 
--   uDANCE uses ASTRAL version 5.17.2, which supports both multithreading and constrained search.
+-   uDance uses ASTRAL version 5.17.2, which supports both multithreading and constrained search.
 
 1.4.1:
 
