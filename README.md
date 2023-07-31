@@ -34,7 +34,7 @@ If you want to use raxml-ng in your workflow, please install raxml-ng manually a
 
 You can run uDANCE on the **test dataset** with 10 gene multiple sequence alignments, 99 backbone sequences, and 146 query sequences using the following command. The command should complete in several minutes using 4 CPU cores:
 
-`snakemake -c 4 --configfile config.yaml --snakefile uDANCE.smk all`
+`snakemake -c 4 --configfile config.yaml --snakefile udance.smk all`
 
 The specification of the run is defined in the config file `config.yaml`. In the `config.yaml`, the working directory is specified using the field `workdir`. Input multiple sequence alignments should be located under `<workdir>/alignments`. For example, for the test dataset, the working directory is `datasmall` and the input alignments are located at `datasmall/alignments`.
 
@@ -128,7 +128,7 @@ Yueyu Jiang
 
 1.6.1
 
--   Benchmarks directives are used in uDANCE.smk
+-   Benchmarks directives are used in udance.smk
 
 1.6.0
 
