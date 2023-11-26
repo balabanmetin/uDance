@@ -97,7 +97,7 @@ uDance workflow also outputs many intermediate files. These intermediate files c
 |    prep_config.min_placements    |       The maximum number of placements occurred for the partition to be skipped to save running time       |
 |       infer_config.method        |                        Gene tree inference method (RAxML-ng, IQTree-2, or RAxML-8)                         |
 |      infer_config.numstart       |                                        The number of starting trees                                        |
-|     infer_config.num_threads     |                             The number of threads used in gene tree inference                              |
+|     infer_config.num_threads     |         The number of starting tree instances that run concurrently (max: infer_config.numstart)           |
 |      refine_config.contract      |                            Contract low support (IQTree-2 aBayes test) branches                            |
 |     refine_config.occupancy      |                              Gene occupancy threshold for sequence inclusion                               |
 | refine_config.outlier_sizelimit  | The next two are 1D k-means-based (k=2) outlier gene detection parameter. Limit for outlier size fraction. |

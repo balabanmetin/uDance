@@ -64,7 +64,8 @@ infer_config:
   method: "raxml-8"
   # number of starting trees
   numstart: 2
-  # threads per core
+  # number of starting tree instances that run concurrently
+  # this number should not exceeed "numstart"
   numthread: 1
 
 refine_config:
