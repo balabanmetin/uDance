@@ -4,7 +4,7 @@
 
 ### Latest Version
 
-uDance version 1.6.3
+uDance version 1.6.4
 
 ### Data used in the manuscript
 
@@ -115,6 +115,8 @@ Yueyu Jiang
 1.6.4
 
 -   Do not transfer branch supports after ASTRAL branch length estimation
+
+-   Important bug fix. Now uDance allows using IQTREE-2 for gene tree topology inference  
 
 1.6.3
 

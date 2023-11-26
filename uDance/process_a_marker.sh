@@ -104,6 +104,12 @@ run_a_start(){
       raxmlHPC -T 1 -m ${RAXMODEL} -F -f D -D -s shrunk.fasta -p $TREEID -n RUN -t START.treefile > raxml-8.log 2>&1
       iqtree -T 1 -abayes -m ${IQMODEL} -s shrunk.fasta -te RAxML_result.RUN -seed $TREEID --redo > iqtree.out 2> iqtree.err
       grep "BEST SCORE" shrunk.fasta.log | cut -f5 -d ' ' > likelihood.txt
+    elif [[ "$ITOOL" == "iqtree" ]] ; then
+      iqtree -T 1 -abayes -m ${IQMODEL} -s shrunk.fasta -seed $TREEID --redo > iqtree.out 2> iqtree.err
+      grep "BEST SCORE" shrunk.fasta.log | cut -f5 -d ' ' > likelihood.txt
+    else
+      echo "ERROR: the provided tool $ITOOL is none of the following options: raxml-8, raxml-ng, or iqtree" >&2
+      return 1
     fi
     #if raxmlHPC -T 1 -m ${RAXMODEL}GAMMA -f e -s ../shrunk.fasta -t RAxML_result.RUN -n RUNGAMMA -p 12345 2> raxml_gamma.err > raxml_gamma.log ;
   popd > /dev/null
