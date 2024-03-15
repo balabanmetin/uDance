@@ -4,6 +4,7 @@ import treeswift as ts
 from pathlib import Path
 from uDance.stitch_strategy import strategy_dealer
 
+
 def deroot(tree):
     if len(tree.root.children) > 2:
         tree.is_rooted = False
@@ -31,14 +32,13 @@ def deroot(tree):
     return
 
 
-
 def safe_midpoint_reroot(tree, node):
     pendant_edge_length = node.edge_length
     # can happen if the input trees are astral trees (terminal branches have no length)
     if pendant_edge_length is None:
         pendant_edge_length = 1
     node.edge_length = 1
-    tree.root.edge_length = None # this prevents a leaf with label "ROOT" from appearing after reroot
+    tree.root.edge_length = None   # this prevents a leaf with label "ROOT" from appearing after reroot
     tree.reroot(node, 0.5, branch_support=True)
     tree.suppress_unifurcations()
     assert len(tree.root.children) == 2
@@ -53,23 +53,23 @@ def stitch(options):
 
 
 def stitch_gen(options, strat):
-    outmap_file = join(options.output_fp, "outgroup_map.json")
+    outmap_file = join(options.output_fp, 'outgroup_map.json')
     with open(outmap_file) as o:
         outmap = json.load(o)
 
-    cg_file = join(options.output_fp, "color_spanning_tree.nwk")
+    cg_file = join(options.output_fp, 'color_spanning_tree.nwk')
     cg = ts.read_tree_newick(cg_file)
 
-    if len(outmap["-1"]["children"]) == 1:
+    if len(outmap['-1']['children']) == 1:
         rm_root = cg.root
         cg.reroot(cg.root.children[0])
         rm_root.parent.remove_child(rm_root)
-        outmap.pop("-1")
+        outmap.pop('-1')
 
     removed = set()
 
     def _stitch(node):
-        if node.label == "-1":
+        if node.label == '-1':
             mytree = ts.Tree()
             mytree.is_rooted = True
             for c in node.children:
@@ -82,10 +82,10 @@ def stitch_gen(options, strat):
                 astral_tree_par.root.remove_child(rc)
                 for rcc in rc.children:
                     astral_tree_par.root.add_child(rcc)
-        astral_tree_cons = ts.read_tree_newick(join(options.output_fp, node.label, "astral_constraint.nwk"))
+        astral_tree_cons = ts.read_tree_newick(join(options.output_fp, node.label, 'astral_constraint.nwk'))
         astral_tree_cons_labels = set(astral_tree_cons.labels(internal=False))
-        raxml_cons_file = join(options.output_fp, node.label, "raxml_constraint.nwk")
-        if Path(raxml_cons_file).is_file(): 
+        raxml_cons_file = join(options.output_fp, node.label, 'raxml_constraint.nwk')
+        if Path(raxml_cons_file).is_file():
             raxml_cons = ts.read_tree_newick(raxml_cons_file)
             raxml_cons_labels = set(raxml_cons.labels(internal=False))
         else:
@@ -93,10 +93,10 @@ def stitch_gen(options, strat):
 
         outmap_par = outmap[node.label]
 
-        uptreestr = outmap_par["up"]
-        non_uptree = astral_tree_cons_labels # default
-        if uptreestr: # there is an uptree
-            uptree = ts.read_tree_newick(outmap_par["up"])
+        uptreestr = outmap_par['up']
+        non_uptree = astral_tree_cons_labels   # default
+        if uptreestr:   # there is an uptree
+            uptree = ts.read_tree_newick(outmap_par['up'])
 
             uptree_labels = set(uptree.labels(internal=False))
             astral_tree_par.root.edge_length = None
@@ -105,12 +105,12 @@ def stitch_gen(options, strat):
             else:
                 # NOTE that the notuptree can be selected more wisely. Pick one that removes as few backbone
                 # species as possible. To be implemented in the future (thanks Met Wood for the idea)...
-                candidate_set = astral_tree_cons_labels.difference(uptree_labels) # override
+                candidate_set = astral_tree_cons_labels.difference(uptree_labels)   # override
             for i in astral_tree_par.traverse_postorder(internal=False):
                 if i.label in candidate_set:
                     notuptree_species = i   # this has to be a child representative or backbone species
                     break
-            #astral_tree_par.is_rooted = True
+            # astral_tree_par.is_rooted = True
             astral_tree_par.reroot(notuptree_species.parent, branch_support=True)
             astral_tree_par.suppress_unifurcations()
             mrca = astral_tree_par.mrca(list(uptree_labels))
@@ -127,7 +127,7 @@ def stitch_gen(options, strat):
             for i in deletelist:
                 for j in i.traverse_postorder(internal=False):
                     if j.label not in uptree_labels:
-                        removed.add(j.label + "\t" + node.label)
+                        removed.add(j.label + '\t' + node.label)
                         if j.label in astral_tree_cons_labels:
                             bb_removed.add(j.label)
                 astral_tree_par.root.remove_child(i)
@@ -143,7 +143,7 @@ def stitch_gen(options, strat):
                     non_uptree_mrca.parent.remove_child(non_uptree_mrca)
                     for j in to_be_deleted.traverse_postorder(internal=False):
                         if j.label not in uptree_labels:
-                            removed.add(j.label + "\t" + node.label)
+                            removed.add(j.label + '\t' + node.label)
                     astral_tree_par = ts.Tree()
                     astral_tree_par.is_rooted = True
                     astral_tree_par.root = non_uptree_mrca
@@ -153,7 +153,7 @@ def stitch_gen(options, strat):
         else:
             childreps = set()
             for chd in node.children:
-                c_rep_tree = ts.read_tree_newick(outmap_par["children"][chd.label])
+                c_rep_tree = ts.read_tree_newick(outmap_par['children'][chd.label])
                 childreps |= set(c_rep_tree.labels(internal=False))
             notreps = astral_tree_cons_labels.difference(childreps)
 
@@ -164,35 +164,35 @@ def stitch_gen(options, strat):
                     break
             if constree_norep_species:
                 astral_tree_par.reroot(constree_norep_species.parent, branch_support=True)
-                #safe_midpoint_reroot(astral_tree_par, constree_norep_species)
+                # safe_midpoint_reroot(astral_tree_par, constree_norep_species)
 
-            else: # no backbone exists. only representatives.
+            else:   # no backbone exists. only representatives.
                 assert len(node.children) >= 2
                 first_c = node.children[0]
-                first_c_rep_tree = ts.read_tree_newick(outmap_par["children"][first_c.label])
+                first_c_rep_tree = ts.read_tree_newick(outmap_par['children'][first_c.label])
                 first_c_rep_tree_labels = set(first_c_rep_tree.labels(internal=False))
                 for i in astral_tree_par.traverse_postorder(internal=False):
                     if i.label in first_c_rep_tree_labels:
                         first_c_rep_tree_rep = i  # this has to be a backbone species that is not a children repres.
                         break
                 astral_tree_par.reroot(first_c_rep_tree_rep.parent, branch_support=True)
-                #safe_midpoint_reroot(astral_tree_par, first_c_rep_tree_rep)
+                # safe_midpoint_reroot(astral_tree_par, first_c_rep_tree_rep)
                 second_c = node.children[1]
-                second_c_rep_tree = ts.read_tree_newick(outmap_par["children"][second_c.label])
+                second_c_rep_tree = ts.read_tree_newick(outmap_par['children'][second_c.label])
                 second_c_rep_tree_labels = set(second_c_rep_tree.labels(internal=False))
                 second_c_rep_tree_mrca = astral_tree_par.mrca(list(second_c_rep_tree_labels))
                 safe_midpoint_reroot(astral_tree_par, second_c_rep_tree_mrca)
 
         for c in node.children:
-            ownsup_child = outmap[c.label]["ownsup"]
+            ownsup_child = outmap[c.label]['ownsup']
             ctree = _stitch(c)
-            c_rep_tree = ts.read_tree_newick(outmap_par["children"][c.label])
+            c_rep_tree = ts.read_tree_newick(outmap_par['children'][c.label])
             c_rep_tree_labels = set(c_rep_tree.labels(internal=False))
-            c_rep_tree_mrca = astral_tree_par.mrca(list(c_rep_tree_labels)) # there was a breakpoint here
+            c_rep_tree_mrca = astral_tree_par.mrca(list(c_rep_tree_labels))   # there was a breakpoint here
             c_rep_tree_mrca_parent = c_rep_tree_mrca.parent
             for j in c_rep_tree_mrca.traverse_postorder(internal=False):
                 if j.label not in c_rep_tree_labels:
-                    removed.add(j.label + "\t" + node.label)
+                    removed.add(j.label + '\t' + node.label)
             # if child does not own its "up" edge, only misplaced queries are under the mrca of child representatives.
             # in that case, the edge length of the mrca node comes from the current subtree, not from the child.
             if not ownsup_child:
@@ -220,20 +220,19 @@ def stitch_gen(options, strat):
                     parent = current.parent
                 for j in current.traverse_postorder(internal=False):
                     if j.label not in c_rep_tree_labels:
-                        removed.add(j.label + "\t" + node.label)
+                        removed.add(j.label + '\t' + node.label)
                 parent.remove_child(current)
                 parent.add_child(ctree.root)
         return astral_tree_par
 
     stitched_tree = _stitch(cg.root)
     deroot(stitched_tree)
-    final_tree = join(options.output_fp, "udance.%s.nwk" % strat.get_suffix())
+    final_tree = join(options.output_fp, 'udance.%s.nwk' % strat.get_suffix())
     stitched_tree.write_tree_newick(final_tree)
-    unplaced = join(options.output_fp, "unplaced.%s.csv" % strat.get_suffix())
-    with open(unplaced, "w") as f:
-        f.write("\n".join(removed) + "\n")
+    unplaced = join(options.output_fp, 'unplaced.%s.csv' % strat.get_suffix())
+    with open(unplaced, 'w') as f:
+        f.write('\n'.join(removed) + '\n')
     return
-
 
     # for n in cg.traverse_postorder():
     #     print(outmap[n.label])

@@ -1,9 +1,11 @@
 from collections import deque
-ZERO_LEN = 10**(-5)
+
+ZERO_LEN = 10 ** (-5)
 
 # initialize properties of input tree and return set containing taxa of leaves
 def prep(tree, support):
-    tree.resolve_polytomies(); tree.suppress_unifurcations()
+    tree.resolve_polytomies()
+    tree.suppress_unifurcations()
     for node in tree.traverse_postorder():
         node.color = -1
         if not hasattr(node, 'placements'):
@@ -17,8 +19,8 @@ def prep(tree, support):
             try:
                 node.confidence = float(str(node))
             except:
-                node.confidence = 100. # give edges without support values support 100
-            if node.confidence < support: # don't allow low-support edges
+                node.confidence = 100.0   # give edges without support values support 100
+            if node.confidence < support:   # don't allow low-support edges
                 node.edge_length = float('inf')
 
 
@@ -37,7 +39,7 @@ def min_tree_coloring_sum(tree, thr):
     color = 0
     for current in tree.traverse_postorder():
         if current == tree.root:
-            current.weight = float("inf")
+            current.weight = float('inf')
         else:
             current.weight = len(current.placements)
         if current.is_leaf():
@@ -47,14 +49,18 @@ def min_tree_coloring_sum(tree, thr):
             if left.weight + right.weight + current.weight <= thr:
                 current.weight += left.weight + right.weight
             elif left.weight + right.weight <= thr:
-                paint(left, color); paint(right, color); color += 1
+                paint(left, color)
+                paint(right, color)
+                color += 1
             else:
                 heavier, lighter = (left, right) if left.weight > right.weight else (right, left)
-                paint(heavier, color); color += 1
+                paint(heavier, color)
+                color += 1
                 if lighter.weight + current.weight <= thr:
                     current.weight += lighter.weight
                 else:
-                    paint(lighter, color); color += 1
+                    paint(lighter, color)
+                    color += 1
 
 
 def min_tree_coloring_sum_max(tree, thr, max_thr):
@@ -62,7 +68,7 @@ def min_tree_coloring_sum_max(tree, thr, max_thr):
     color = 0
     for current in tree.traverse_postorder():
         if current == tree.root:
-            current.weight = float("inf")
+            current.weight = float('inf')
         else:
             current.weight = len(current.placements)
         if current.is_leaf():
@@ -70,23 +76,31 @@ def min_tree_coloring_sum_max(tree, thr, max_thr):
             current.farthest = 0
         else:
             left, right = current.children
-            if left.weight + right.weight + current.weight <= thr or \
-                    (left.weight + right.weight + current.weight > thr and left.weight + right.weight <= max(3, thr / 10)) or \
-                    left.edge_length + left.farthest + right.edge_length + right.farthest < max_thr or \
-                    (left.edge_length <= ZERO_LEN and len(left.placements) > 0) or \
-                    (right.edge_length <= ZERO_LEN and len(right.placements) > 0) or \
-                    (not current.is_root() and current.edge_length <= ZERO_LEN and len(current.placements) > 0):
+            if (
+                left.weight + right.weight + current.weight <= thr
+                or (
+                    left.weight + right.weight + current.weight > thr and left.weight + right.weight <= max(3, thr / 10)
+                )
+                or left.edge_length + left.farthest + right.edge_length + right.farthest < max_thr
+                or (left.edge_length <= ZERO_LEN and len(left.placements) > 0)
+                or (right.edge_length <= ZERO_LEN and len(right.placements) > 0)
+                or (not current.is_root() and current.edge_length <= ZERO_LEN and len(current.placements) > 0)
+            ):
                 current.weight += left.weight + right.weight
                 current.farthest = max(left.edge_length + left.farthest, right.edge_length + right.farthest)
             elif left.weight + right.weight <= thr:
-                paint(left, color); paint(right, color); color += 1
+                paint(left, color)
+                paint(right, color)
+                color += 1
                 current.farthest = 0
             else:
                 heavier, lighter = (left, right) if left.weight > right.weight else (right, left)
-                paint(heavier, color); color += 1
+                paint(heavier, color)
+                color += 1
                 current.farthest = lighter.farthest + lighter.edge_length
                 if lighter.weight + current.weight <= thr:
                     current.weight += lighter.weight
                 else:
-                    paint(lighter, color); color += 1
+                    paint(lighter, color)
+                    color += 1
                     current.farthest = 0

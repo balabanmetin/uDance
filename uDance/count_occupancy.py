@@ -1,11 +1,10 @@
-
 from uDance.fasta2dic import fasta2dic
 from os import listdir
 from os.path import isfile, join, splitext
 
 
 def count_occupancy(alndir, protein):
-    only_files = [f for f in listdir(alndir) if isfile(join(alndir, f)) and not f.startswith(".")]
+    only_files = [f for f in listdir(alndir) if isfile(join(alndir, f)) and not f.startswith('.')]
 
     num_genes = 0
     occupancy = {}

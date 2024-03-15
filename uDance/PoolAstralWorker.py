@@ -24,23 +24,23 @@ class PoolAstralWorker:
 
     @classmethod
     def worker(cls, partition_output_dir):
-        if exists(Path(join(partition_output_dir, "skip_partition"))):
-            jlabs = list(ts.read_tree_newick(join(partition_output_dir, "astral_constraint.nwk")).labels())
-            backbone_tree_fp = join(partition_output_dir, "../../backbone.nwk")
+        if exists(Path(join(partition_output_dir, 'skip_partition'))):
+            jlabs = list(ts.read_tree_newick(join(partition_output_dir, 'astral_constraint.nwk')).labels())
+            backbone_tree_fp = join(partition_output_dir, '../../backbone.nwk')
             backbone_tree = ts.read_tree_newick(backbone_tree_fp)
             extracted_tree = backbone_tree.extract_tree_with(jlabs)
-            input_tree_path = join(partition_output_dir, "astral_input.trees")
+            input_tree_path = join(partition_output_dir, 'astral_input.trees')
             extracted_tree.write_tree_newick(input_tree_path)
-            for i in ["incremental", "updates"]:
-                newick_path = join(partition_output_dir, "astral_output.%s.nwk" % i)
+            for i in ['incremental', 'updates']:
+                newick_path = join(partition_output_dir, 'astral_output.%s.nwk' % i)
                 extracted_tree.write_tree_newick(newick_path)
-            #     newickbl_path = join(partition_output_dir, "astral_output.%s.nwk.bl" % i)
-            #     extracted_tree.write_tree_newick(newickbl_path)
-                log_path = join(partition_output_dir, "astral.%s.log" % i)
-                with open(log_path, "w") as f:
-                    f.write("Final quartet score is 1\n")
+                #     newickbl_path = join(partition_output_dir, "astral_output.%s.nwk.bl" % i)
+                #     extracted_tree.write_tree_newick(newickbl_path)
+                log_path = join(partition_output_dir, 'astral.%s.log' % i)
+                with open(log_path, 'w') as f:
+                    f.write('Final quartet score is 1\n')
             return
-        genes = glob(join(partition_output_dir, "*", ""))
+        genes = glob(join(partition_output_dir, '*', ''))
         median_map = dict()
         genetrees = dict()
         for gene in genes:
@@ -50,26 +50,26 @@ class PoolAstralWorker:
             #     best = Path(join(gene, 'RUN.raxml.bestTree'))
             # elif cls.options.method == 'raxml-8':
             best = Path(join(gene, 'bestTree.nwk'))
-            #bestCollapsed = Path(join(gene, 'RUN.raxml.bestTreeCollapsed'))
+            # bestCollapsed = Path(join(gene, 'RUN.raxml.bestTreeCollapsed'))
             # if bestCollapsed.is_file():
             #     raxtree = bestCollapsed
             if best.is_file():
                 raxtree = best
             else:
-                stderr.write("%s/bestTree.nwk does not exist. RAxML job is corrupted. \n" % gene)
+                stderr.write('%s/bestTree.nwk does not exist. RAxML job is corrupted. \n' % gene)
                 continue
             with open(raxtree) as f:
                 treestr = f.readline()
             tf = ts.read_tree_newick(treestr)
-            lpps = [float(i.label.replace("/","")) for i in tf.traverse_postorder(leaves=False) if i.label]
+            lpps = [float(i.label.replace('/', '')) for i in tf.traverse_postorder(leaves=False) if i.label]
             if len(lpps) > 0:
                 median_map[gene] = median(lpps)
             # contract after computing the median
             tf.contract_low_support(threshold=cls.options.contract_threshold)
-            treestr = str(tf) + "\n"
-            dupmap_file = Path(join(gene, "dupmap.txt"))
+            treestr = str(tf) + '\n'
+            dupmap_file = Path(join(gene, 'dupmap.txt'))
             if dupmap_file.is_file():
-                dmp = list(map(lambda x: x.strip().split("\t"), open(dupmap_file).readlines()))
+                dmp = list(map(lambda x: x.strip().split('\t'), open(dupmap_file).readlines()))
                 genetrees[gene] = expand_dedupe_newick(treestr, dmp)
             else:
                 genetrees[gene] = treestr
@@ -77,13 +77,21 @@ class PoolAstralWorker:
         # remove outlier genes. outlier is defined as having lower median local posterior probability than majority
         # we use 1d k-means (k=2) for outlier detection.
         clusters, centroids = cluster(list(median_map.values()), k=2)
-        if (1-cls.options.outlier_sizelimit) < sum(clusters) / len(clusters) < 1 and centroids[1] - centroids[0] > cls.options.centroid_difference:
+        if (1 - cls.options.outlier_sizelimit) < sum(clusters) / len(clusters) < 1 and centroids[1] - centroids[
+            0
+        ] > cls.options.centroid_difference:
             min_median = min([v for i, v in enumerate(median_map.values()) if clusters[i] == 1])
             numdiscard = len(clusters) - sum(clusters)
-            print("In cluster %s, %d gene tree(s) with lower than "
-                  "%.2f median lpp are discarded." % (partition_output_dir, numdiscard, min_median), file=stderr)
-            confident_trees = {gene: ts.read_tree_newick(genetrees[gene]) for i, gene in enumerate(median_map.keys()) if
-                               clusters[i] == 1}
+            print(
+                'In cluster %s, %d gene tree(s) with lower than '
+                '%.2f median lpp are discarded.' % (partition_output_dir, numdiscard, min_median),
+                file=stderr,
+            )
+            confident_trees = {
+                gene: ts.read_tree_newick(genetrees[gene])
+                for i, gene in enumerate(median_map.keys())
+                if clusters[i] == 1
+            }
         else:
             confident_trees = {gene: ts.read_tree_newick(tstr) for gene, tstr in genetrees.items()}
         # remove low occupancy sequences from all gene trees
@@ -97,12 +105,12 @@ class PoolAstralWorker:
                     occups[l] += 1
         low_occups = set([tag for tag in occups if occups[tag] < cls.options.occupancy_threshold])
         try:
-            anchor_seqs = set(ts.read_tree_newick(join(partition_output_dir, "astral_constraint.nwk")).labels())
+            anchor_seqs = set(ts.read_tree_newick(join(partition_output_dir, 'astral_constraint.nwk')).labels())
         except:
             anchor_seqs = set()
         low_occups = list(low_occups.difference(anchor_seqs))
         if len(low_occups) > 0:
-            print("In cluster %s, following low occupancy sequences are removed." % partition_output_dir, file=stderr)
+            print('In cluster %s, following low occupancy sequences are removed.' % partition_output_dir, file=stderr)
             print(low_occups, file=stderr)
 
         tobepopped = []
@@ -116,14 +124,13 @@ class PoolAstralWorker:
         for g in tobepopped:
             confident_trees.pop(g)
 
-
         expanded_trees = []
         for gene in confident_trees.keys():
-            extreepath = join(gene, "raxml.expanded.nwk")
+            extreepath = join(gene, 'raxml.expanded.nwk')
             expanded_trees.append(extreepath)
-            with open(extreepath, "w") as out:
-                out.write(str(confident_trees[gene]) + "\n")
-        astral_input_file = join(partition_output_dir, "astral_input.trees")
+            with open(extreepath, 'w') as out:
+                out.write(str(confident_trees[gene]) + '\n')
+        astral_input_file = join(partition_output_dir, 'astral_input.trees')
 
         with open(astral_input_file, 'wb') as wfd:
             for f in expanded_trees:
@@ -131,30 +138,63 @@ class PoolAstralWorker:
                     shutil.copyfileobj(fd, wfd)
 
         astral_output_file, astral_log_file, astral_const_file = [dict(), dict(), dict()]
-        astral_const_file["incremental"] = join(partition_output_dir, "astral_constraint.nwk")
-        astral_const_file["updates"] = join(partition_output_dir, "raxml_constraint.nwk")
+        astral_const_file['incremental'] = join(partition_output_dir, 'astral_constraint.nwk')
+        astral_const_file['updates'] = join(partition_output_dir, 'raxml_constraint.nwk')
 
-        for mtd in ["incremental", "updates"]:
-            astral_output_file[mtd] = Path(join(partition_output_dir, "astral_output.%s.nwk" % mtd))
-            if mtd == "updates" and not Path(astral_const_file["updates"]).is_file() and not Path(
-                    astral_const_file["incremental"]).is_file():
-                shutil.copyfile(astral_output_file["incremental"], astral_output_file["updates"])
+        for mtd in ['incremental', 'updates']:
+            astral_output_file[mtd] = Path(join(partition_output_dir, 'astral_output.%s.nwk' % mtd))
+            if (
+                mtd == 'updates'
+                and not Path(astral_const_file['updates']).is_file()
+                and not Path(astral_const_file['incremental']).is_file()
+            ):
+                shutil.copyfile(astral_output_file['incremental'], astral_output_file['updates'])
                 break
-            astral_log_file[mtd] = join(partition_output_dir, "astral.%s.log" % mtd)
+            astral_log_file[mtd] = join(partition_output_dir, 'astral.%s.log' % mtd)
             if not Path(astral_const_file[mtd]).is_file():
-                s = ["java", "-Xmx%sM" % cls.options.memory, "-Djava.library.path=%s" % cls.astral_libdir, "-jar", cls.astral_mp_exec, "-i", astral_input_file,
-                    "-o", astral_output_file[mtd], "-C", "-T", str(cls.options.num_thread)]
+                s = [
+                    'java',
+                    '-Xmx%sM' % cls.options.memory,
+                    '-Djava.library.path=%s' % cls.astral_libdir,
+                    '-jar',
+                    cls.astral_mp_exec,
+                    '-i',
+                    astral_input_file,
+                    '-o',
+                    astral_output_file[mtd],
+                    '-C',
+                    '-T',
+                    str(cls.options.num_thread),
+                ]
             else:
-                s = ["java", "-Xmx%sM" % cls.options.memory, "-Djava.library.path=%s" % cls.astral_libdir, "-jar", cls.astral_mp_exec, "-i", astral_input_file,
-                    "-o", astral_output_file[mtd], "-j", astral_const_file[mtd], "-C", "-T", str(cls.options.num_thread)]
+                s = [
+                    'java',
+                    '-Xmx%sM' % cls.options.memory,
+                    '-Djava.library.path=%s' % cls.astral_libdir,
+                    '-jar',
+                    cls.astral_mp_exec,
+                    '-i',
+                    astral_input_file,
+                    '-o',
+                    astral_output_file[mtd],
+                    '-j',
+                    astral_const_file[mtd],
+                    '-C',
+                    '-T',
+                    str(cls.options.num_thread),
+                ]
 
-            with open(astral_log_file[mtd], "w") as lg:
+            with open(astral_log_file[mtd], 'w') as lg:
                 with Popen(s, stdout=PIPE, stdin=PIPE, stderr=lg) as p:
                     astral_stdout = p.stdout.read().decode('utf-8')
                     p.poll()
                     if p.returncode:
-                        print("ASTRAL job on partition %s has failed. Check the log file %s for further information."
-                              % (partition_output_dir, astral_log_file[mtd]), file=stderr, flush=True)
+                        print(
+                            'ASTRAL job on partition %s has failed. Check the log file %s for further information.'
+                            % (partition_output_dir, astral_log_file[mtd]),
+                            file=stderr,
+                            flush=True,
+                        )
                         exit(p.returncode)
                     # print(astral_stdout)
         # if cls.options.use_gpu:

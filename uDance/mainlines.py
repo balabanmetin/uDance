@@ -51,14 +51,19 @@ def subsample_align(nm, mins, size):
 
 
 def mainlines(options):
-    only_files = sorted([join(options.alignment_dir_fp, f) for f in listdir(options.alignment_dir_fp) if
-                  isfile(join(options.alignment_dir_fp, f)) and not f.startswith(".")])
+    only_files = sorted(
+        [
+            join(options.alignment_dir_fp, f)
+            for f in listdir(options.alignment_dir_fp)
+            if isfile(join(options.alignment_dir_fp, f)) and not f.startswith('.')
+        ]
+    )
     np.random.seed(42)
     gap_thr = options.gap_threshold
     concat_len = options.concat_length
     target_num = options.target_num
     names_and_mats = [fasta2mat(f, options.protein_seqs, False) for f in only_files]
-    #names_and_mats_ungapped = [gap_filter(n, m, gap_thr) for n, m in names_and_mats]
+    # names_and_mats_ungapped = [gap_filter(n, m, gap_thr) for n, m in names_and_mats]
     names_and_mats_ungapped = names_and_mats
     # union all taxon names
     catalog = reduce(np.union1d, [n for n, m in names_and_mats_ungapped])
@@ -105,35 +110,35 @@ def mainlines(options):
 
     concat = np.concatenate(subsamples, axis=1)
     # convert byte array to string
-    concat = [i.tobytes().decode("utf-8") for i in concat]
+    concat = [i.tobytes().decode('utf-8') for i in concat]
     concat_fp = tempfile.NamedTemporaryFile(delete=False, mode='w+t')
     fasttree_log = tempfile.NamedTemporaryFile(delete=False, mode='w+t').name
     fasttree_out = tempfile.NamedTemporaryFile(delete=False, mode='w+t').name
 
-    with open(concat_fp.name, "w") as f:
+    with open(concat_fp.name, 'w') as f:
         for ids, seq in enumerate(concat):
-            f.write(">" + id_to_name[ids] + "\n")
-            f.write(seq + "\n")
+            f.write('>' + id_to_name[ids] + '\n')
+            f.write(seq + '\n')
 
     # run fasttree and write its output to a file
     if options.protein_seqs:
-        s = ["fasttree", "-nopr", "-lg", "-log", fasttree_log]
+        s = ['fasttree', '-nopr', '-lg', '-log', fasttree_log]
     else:
-        s = ["fasttree", "-nopr", "-gtr", "-nt", "-log", fasttree_log]
+        s = ['fasttree', '-nopr', '-gtr', '-nt', '-log', fasttree_log]
         # s = ["FastTree", "-nopr", "-gtr", "-nt", "-gamma", "-log", fasttree_log]
 
-    with open(concat_fp.name, "r") as rf:
+    with open(concat_fp.name, 'r') as rf:
         with Popen(s, stdout=PIPE, stdin=rf, stderr=sys.stderr) as p:
             tree_string = p.stdout.read().decode('utf-8')
             p.poll()
             if p.returncode:
-                sys.stderr.write("FastTree returned a nonzero return code. Check your FastTreeMP installation.\n")
-                sys.stderr.write("Exiting.\n")
+                sys.stderr.write('FastTree returned a nonzero return code. Check your FastTreeMP installation.\n')
+                sys.stderr.write('Exiting.\n')
                 exit(p.returncode)
-            with open(fasttree_out, "w") as fout:
-                fout.write(tree_string.strip() + "\n")
+            with open(fasttree_out, 'w') as fout:
+                fout.write(tree_string.strip() + '\n')
     if not tree_string:
-        sys.stderr.write("FastTree failed. Check your FastTreeMP installation.\n")
+        sys.stderr.write('FastTree failed. Check your FastTreeMP installation.\n')
         exit(1)
 
     tmax = ts.read_tree_newick(tree_string).diameter()
@@ -150,14 +155,14 @@ def mainlines(options):
     while tcur - tmin >= stop_cond and tmax - tcur >= stop_cond:
         numiter += 1
         # print(numiter)
-        s = ["TreeCluster.py", "-i", fasttree_out, "-m", "max", "-t", str(tcur), "-o", treecluster_out]
+        s = ['TreeCluster.py', '-i', fasttree_out, '-m', 'max', '-t', str(tcur), '-o', treecluster_out]
         retcode = call(s, stdout=nldef, stderr=nldef)
         if retcode:
-            sys.stderr.write("Treecluster returned a nonzero return code. Check your TreeCluster installation.\n")
-            sys.stderr.write("Exiting.\n")
+            sys.stderr.write('Treecluster returned a nonzero return code. Check your TreeCluster installation.\n')
+            sys.stderr.write('Exiting.\n')
             sys.exit(retcode)
         clusters = tc_parser(treecluster_out)
-        num_singletons = sum([len(tags) for idx, tags in clusters if idx == "-1"])
+        num_singletons = sum([len(tags) for idx, tags in clusters if idx == '-1'])
         num_clusters = len(clusters) + max(0, num_singletons - 1)
         if num_clusters == target_num:
             break
@@ -170,7 +175,7 @@ def mainlines(options):
 
     select = []
     for ci, tags in clusters:
-        if ci == "-1":
+        if ci == '-1':
             select += tags
         else:
             hi_med, tag = sorted(zip(list(map(lambda x: tot_med_scores[name_to_id[x]], tags)), tags), reverse=True)[0]

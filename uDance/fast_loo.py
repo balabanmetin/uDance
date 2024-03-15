@@ -25,6 +25,7 @@ class PrioritySet(object):
     def __len__(self):
         return len(self.heap)
 
+
 def set_levels(tree):
     root = tree.root
     root.level = 0
@@ -54,6 +55,7 @@ def distance_between(n1, n2):
         count += 1
     return count
 
+
 t = ts.read_tree_newick(sys.argv[1])
 # find a backbone
 # for n in t.traverse_postorder(internal=False):
@@ -64,11 +66,11 @@ t = ts.read_tree_newick(sys.argv[1])
 # t.reroot(n)
 # t.suppress_unifurcations()
 set_levels(t)
-labs = [l for l in t.labels(internal=False) if not l.endswith("-query")]
-l2n = t.label_to_node(selection="leaves")
+labs = [l for l in t.labels(internal=False) if not l.endswith('-query')]
+l2n = t.label_to_node(selection='leaves')
 for e in t.traverse_postorder():
     if e.is_leaf():
-        if e.label.endswith("-query"):
+        if e.label.endswith('-query'):
             e.all_query = 1
         else:
             e.all_query = 0
@@ -76,17 +78,18 @@ for e in t.traverse_postorder():
         e.all_query = functools.reduce(lambda x, y: x and y, [c.all_query for c in e.children])
 
 for e in t.traverse_postorder(leaves=False):
-    if sum([1-f.all_query for f in e.children]) >= 2:
+    if sum([1 - f.all_query for f in e.children]) >= 2:
         e.true_split = True
     else:
         e.true_split = False
 
+
 def dist_calc():
     for l in labs:
-        if l in l2n and l + "-query" in l2n:
-            yield l, distance_between(l2n[l], l2n[l + "-query"])-1
+        if l in l2n and l + '-query' in l2n:
+            yield l, distance_between(l2n[l], l2n[l + '-query']) - 1
 
 
 dists = dict(dist_calc())
 for k, v in dists.items():
-    print(k + "\t" + str(int(v)))
+    print(k + '\t' + str(int(v)))

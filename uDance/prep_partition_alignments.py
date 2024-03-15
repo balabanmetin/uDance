@@ -7,8 +7,10 @@ from os import listdir
 from os.path import isfile, join, splitext
 
 
-def prep_partition_alignments(alndir, protein_flag, species_path_list, num_thread, subalignment_length, fragment_length):
-    only_files = [f for f in listdir(alndir) if isfile(join(alndir, f)) and not f.startswith(".")]
+def prep_partition_alignments(
+    alndir, protein_flag, species_path_list, num_thread, subalignment_length, fragment_length
+):
+    only_files = [f for f in listdir(alndir) if isfile(join(alndir, f)) and not f.startswith('.')]
     all_scripts = []
     for aln in only_files:
         aln_input_file = join(alndir, aln)
