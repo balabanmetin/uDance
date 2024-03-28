@@ -1,6 +1,6 @@
 FROM continuumio/miniconda3:latest
 RUN apt-get update -qq && apt-get upgrade -qq -y && \
-    apt-get install -qq -y default-jdk && \
+    apt-get install -qq -y default-jdk rsync && \
     git clone https://github.com/balabanmetin/uDance.git && \
     cd uDance && \
     bash install.sh && \
