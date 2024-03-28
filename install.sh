@@ -33,6 +33,6 @@ else
         # install astral
         pushd $SCRIPTS_DIR/uDance/tools/ASTRAL
        	./make.sh > .astralInstallation.log 2>&1
-	    conda activate udance && java -D"java.library.path=lib/" -jar native_library_tester.jar
+        conda activate udance && java -D"java.library.path=lib/" -jar native_library_tester.jar
         popd
 fi
