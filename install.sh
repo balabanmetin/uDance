@@ -26,8 +26,6 @@ else
         source activate udance
         conda activate udance
         pip install apples==2.0.11 kmeans1d==0.3.1
-	# install raxml-ng from the github release (conda conflict)
-	echo "Warning. if you want to use raxml-ng, please install it manually and make the executable "raxml-ng" available in the environment."
         # julia needs to download packages during the first run. Let's do it now while we are online :)
         julia $SCRIPTS_DIR/uDance/correction_multi.jl datasmall/alignments/p0309.fasta > /dev/null
         # install astral
