@@ -1,5 +1,6 @@
 FROM continuumio/miniconda3:latest
-RUN git clone https://github.com/balabanmetin/uDance.git && \
+RUN conda install openjdk && \
+    git clone https://github.com/balabanmetin/uDance.git && \
     cd uDance && \
     bash install.sh && \
     conda activate udance && \
