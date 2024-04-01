@@ -4,7 +4,7 @@
 
 ### Latest Version
 
-uDance version 1.6.4
+uDance version 1.6.5
 
 ### Data used in the manuscript
 
@@ -18,7 +18,7 @@ uDance is highly-scalable end-to-end workflow for inferring phylogenomic trees o
 
 ### Prerequisites:
 
--   Linux or OS X (Intel or Apple chip)
+-   Linux or OS X Intel (OS X Apple chip is not supported because some dependencies does not support this architecture)
 -   Anaconda
 
 ### Installation steps:
@@ -108,7 +108,14 @@ Metin Balaban
 
 Yueyu Jiang
 
+Niema Moshiri
+
 ## Changelog
+1.6.5
+
+- Dockerfile added
+
+- Bug fix for raxml-ng gene tree inference. raxml-ng (v1.2.1) should work now
 
 1.6.4
 

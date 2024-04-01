@@ -107,6 +107,8 @@ run_a_start(){
     elif [[ "$ITOOL" == "iqtree" ]] ; then
       iqtree -T 1 -abayes -m ${IQMODEL} -s shrunk.fasta -seed $TREEID --redo > iqtree.out 2> iqtree.err
       grep "BEST SCORE" shrunk.fasta.log | cut -f5 -d ' ' > likelihood.txt
+    elif [[ "$ITOOL" == "raxml-ng" ]] ; then
+      :
     else
       echo "ERROR: the provided tool $ITOOL is none of the following options: raxml-8, raxml-ng, or iqtree" >&2
       return 1
