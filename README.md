@@ -28,8 +28,6 @@ uDance is highly-scalable end-to-end workflow for inferring phylogenomic trees o
 3.  `bash install.sh`
 4.  `conda activate udance`
 
-If you want to use raxml-ng in your workflow, please install raxml-ng manually and make sure the executable `raxml-ng` is available in your path.
-
 ## Quick start
 
 You can run uDance on the **test dataset** with 10 gene multiple sequence alignments, 99 backbone sequences, and 146 query sequences using the following command. The command should complete in several minutes using 4 CPU cores:
