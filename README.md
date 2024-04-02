@@ -16,17 +16,26 @@ uDance is highly-scalable end-to-end workflow for inferring phylogenomic trees o
 
 ## Installation
 
-### Prerequisites:
+### Conda installation
+#### Prerequisites:
 
 -   Linux or OS X Intel (OS X Apple chip is not supported because some dependencies does not support this architecture)
 -   Anaconda
 
-### Installation steps:
+#### Installation steps:
 
 1.  Clone the repository
 2.  `cd uDance`
 3.  `bash install.sh`
 4.  `conda activate udance`
+
+
+### Using docker image
+* Pull docker image.   
+``docker pull niemasd/udance:latest``
+* Run docker image.   
+``docker run -it --rm -v $PWD:/uDance/udance_test -w /uDance  niemasd/udance:latest``   
+This command will mount the current directory to `/uDance/udance_test` in the container and set the working directory as `/uDance`.
 
 ## Quick start
 
